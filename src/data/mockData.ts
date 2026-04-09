@@ -80,40 +80,32 @@ export const applications: Application[] = [
 ];
 
 export function getCompanyById(id: string): Company | undefined {
-  return companies.find((c) => c.id === id);
+  // Usar servicio real
+  // return companies.find((c) => c.id === id);
+  // Ejemplo de uso:
+  // const empresa = await obtenerEmpresaPorId(id);
+  // return empresa;
+  return undefined;
 }
 
 export function getJobById(id: string): JobOffer | undefined {
-  return jobOffers.find((j) => j.id === id);
+  // Usar servicio real
+  // const oferta = await obtenerOfertaPorId(id);
+  // return oferta;
+  return undefined;
 }
 
 export function getApplicationsForCandidate(candidateId: string): (Application & { job?: JobOffer; company?: Company })[] {
-  return applications
-    .filter((a) => a.candidateId === candidateId)
-    .map((a) => {
-      const job = getJobById(a.jobOfferId);
-      const company = job ? getCompanyById(job.companyId) : undefined;
-      return { ...a, job, company };
-    });
+  // Usar servicio real
+  return [];
 }
 
 export function getApplicationsForJob(jobOfferId: string): (Application & { candidate?: User })[] {
-  return applications
-    .filter((a) => a.jobOfferId === jobOfferId)
-    .map((a) => {
-      const candidate = users.find((u) => u.id === a.candidateId);
-      return { ...a, candidate };
-    });
+  // Usar servicio real
+  return [];
 }
 
 export function getJobsForRecruiter(recruiterId: string): (JobOffer & { company?: Company; applicationCount: number })[] {
-  const recruiterCompanies = companies.filter((c) => c.recruiterId === recruiterId);
-  const companyIds = recruiterCompanies.map((c) => c.id);
-  return jobOffers
-    .filter((j) => companyIds.includes(j.companyId))
-    .map((j) => ({
-      ...j,
-      company: getCompanyById(j.companyId),
-      applicationCount: applications.filter((a) => a.jobOfferId === j.id).length,
-    }));
+  // Usar servicio real
+  return [];
 }

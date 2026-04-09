@@ -1,23 +1,89 @@
 import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
-import { ArrowLeft, MapPin, DollarSign, Clock, Building2, Users } from "lucide-react";
-import { getJobById, getCompanyById, getApplicationsForJob } from "@/data/mockData";
+import { useState, useEffect } from "react";
+import { ArrowLeft, MapPin, DollarSign, Clock, Building2, Loader2 } from "lucide-react";
+import { ofertasService, type OfertaResponse } from "@/lib/ofertasService";
+import { postulacionesService } from "@/lib/postulacionesService";
 import { useAuth } from "@/context/AuthContext";
 import ApplyModal from "@/components/ApplyModal";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentUser } = useAuth();
+
+  const [job, setJob] = useState<OfertaResponse | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
-  const [showCandidates, setShowCandidates] = useState(false);
+  const [checkingApplication, setCheckingApplication] = useState(false);
 
-  const job = getJobById(id || "");
-  const company = job ? getCompanyById(job.companyId) : undefined;
-  const jobApplications = job ? getApplicationsForJob(job.id) : [];
+  useEffect(() => {
+    if (!id) return;
 
-  if (!job || !company) {
+    const fetchJob = async () => {
+      try {
+        const data = await ofertasService.obtenerPublica(parseInt(id));
+        setJob(data);
+
+        // Verificar si ya aplicó (si está autenticado y es candidato)
+        if (currentUser && currentUser.rol?.toLowerCase() === "candidato") {
+          await checkIfApplied(parseInt(id));
+        }
+      } catch (error) {
+        console.error("Error cargando oferta:", error);
+        toast.error("No se pudo cargar la oferta");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJob();
+  }, [id, currentUser]);
+
+  const checkIfApplied = async (ofertaId: number) => {
+    setCheckingApplication(true);
+    try {
+      const response = await postulacionesService.misPostulaciones(0, 100);
+      const yaAplico = response.content.some(p => p.ofertaId === ofertaId);
+      setHasApplied(yaAplico);
+    } catch (error) {
+      console.error("Error verificando aplicación:", error);
+    } finally {
+      setCheckingApplication(false);
+    }
+  };
+
+  const handleApply = async (coverLetter: string, file: File) => {
+    if (!currentUser || !job) return;
+
+    try {
+      await postulacionesService.enviar({
+        ofertaId: job.id,
+        mensaje: coverLetter,
+        cv: file,
+      });
+      setShowApplyModal(false);
+      setHasApplied(true);
+      toast.success("Aplicación enviada correctamente", {
+        description: "Tu CV ha sido enviado a la empresa.",
+      });
+    } catch (error: any) {
+      console.error("Error al enviar postulación:", error);
+      toast.error(error.response?.data || "Error al enviar la aplicación");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!job) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-16 text-center">
         <p className="text-muted-foreground">Oferta no encontrada.</p>
@@ -28,13 +94,12 @@ export default function JobDetail() {
     );
   }
 
-  const handleApply = (coverLetter: string, fileName: string) => {
-    setShowApplyModal(false);
-    setHasApplied(true);
-    toast.success("Aplicación enviada correctamente", {
-      description: `Tu CV (${fileName}) ha sido enviado a ${company.name}.`,
-    });
-  };
+  const fechaPublicacion = job.fechaCreacion
+    ? format(new Date(job.fechaCreacion), "dd 'de' MMMM 'de' yyyy", { locale: es })
+    : 'Reciente';
+
+  const isCandidate = currentUser?.rol?.toLowerCase() === "candidato";
+  const isRecruiter = currentUser?.rol?.toLowerCase() === "recruiter";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -43,61 +108,60 @@ export default function JobDetail() {
       </Link>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        {/* Columna principal - Detalles de la oferta */}
         <div className="lg:col-span-2 animate-fade-in">
           <div className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg font-bold text-primary">
-                {company.logo}
+                {job.nombreEmpresa?.charAt(0) || "E"}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{job.title}</h1>
-                <p className="mt-0.5 text-muted-foreground">{company.name}</p>
+                <h1 className="text-2xl font-bold text-foreground">{job.titulo}</h1>
+                <p className="mt-0.5 text-muted-foreground">{job.nombreEmpresa || "Empresa Confidencial"}</p>
               </div>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5">
-                <MapPin className="h-3.5 w-3.5" /> {job.location}
+                <MapPin className="h-3.5 w-3.5" /> {job.ubicacion || 'Remoto'}
               </span>
               <span className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5">
-                <DollarSign className="h-3.5 w-3.5" /> {job.salary}
+                <DollarSign className="h-3.5 w-3.5" /> {job.rangoSalarial || 'No especificado'}
               </span>
               <span className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5">
-                <Clock className="h-3.5 w-3.5" /> {job.postedAt}
+                <Clock className="h-3.5 w-3.5" /> {fechaPublicacion}
               </span>
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-1.5">
-              {job.tags.map((tag) => (
-                <span key={tag} className="tag-pill">{tag}</span>
-              ))}
             </div>
 
             <div className="mt-6 border-t border-border pt-6">
               <h2 className="text-lg font-semibold text-foreground">Descripción del puesto</h2>
-              <p className="mt-3 leading-relaxed text-muted-foreground">{job.description}</p>
+              <p className="mt-3 leading-relaxed text-muted-foreground whitespace-pre-wrap">{job.descripcion}</p>
             </div>
           </div>
         </div>
 
+        {/* Columna lateral - Info empresa y botón aplicar */}
         <div className="animate-fade-in">
           <div className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 font-bold text-primary text-sm">
-                {company.logo}
+                {job.nombreEmpresa?.charAt(0) || "E"}
               </div>
               <div>
-                <p className="font-semibold text-foreground">{company.name}</p>
+                <p className="font-semibold text-foreground">{job.nombreEmpresa || "Empresa Confidencial"}</p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Building2 className="h-3 w-3" /> Empresa verificada
                 </p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{company.description}</p>
 
             <div className="mt-6">
-              {currentUser?.role === "CANDIDATE" ? (
-                hasApplied ? (
+              {isCandidate ? (
+                checkingApplication ? (
+                  <div className="flex items-center justify-center py-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                ) : hasApplied ? (
                   <div className="rounded-lg bg-success/10 px-4 py-3 text-center text-sm font-medium text-success">
                     ✓ Ya has aplicado a esta oferta
                   </div>
@@ -109,14 +173,10 @@ export default function JobDetail() {
                     Aplicar ahora
                   </button>
                 )
-              ) : currentUser?.role === "RECRUITER" ? (
-                <button
-                  onClick={() => setShowCandidates(!showCandidates)}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  <Users className="h-4 w-4" />
-                  Ver Candidatos ({jobApplications.length})
-                </button>
+              ) : isRecruiter ? (
+                <div className="rounded-lg bg-secondary/50 px-4 py-3 text-center text-sm text-muted-foreground">
+                  Eres reclutador. No puedes aplicar a ofertas.
+                </div>
               ) : (
                 <Link
                   to="/login"
@@ -127,42 +187,13 @@ export default function JobDetail() {
               )}
             </div>
           </div>
-
-          {showCandidates && jobApplications.length > 0 && (
-            <div className="mt-4 rounded-xl border border-border bg-card p-6 animate-fade-in">
-              <h3 className="font-semibold text-foreground mb-3">Candidatos</h3>
-              <div className="space-y-3">
-                {jobApplications.map((app) => (
-                  <div key={app.id} className="flex items-center justify-between rounded-lg bg-secondary p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                        {app.candidate?.avatar}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{app.candidate?.name}</p>
-                        <p className="text-xs text-muted-foreground">{app.cvFileName}</p>
-                      </div>
-                    </div>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      app.status === "ACCEPTED" ? "bg-success/10 text-success" :
-                      app.status === "REJECTED" ? "bg-destructive/10 text-destructive" :
-                      app.status === "REVIEWED" ? "bg-info/10 text-info" :
-                      "bg-warning/10 text-warning"
-                    }`}>
-                      {app.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {showApplyModal && (
+      {showApplyModal && job && (
         <ApplyModal
-          jobTitle={job.title}
-          companyName={company.name}
+          jobTitle={job.titulo}
+          companyName={job.nombreEmpresa || "Empresa Confidencial"}
           onClose={() => setShowApplyModal(false)}
           onSubmit={handleApply}
         />

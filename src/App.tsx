@@ -7,13 +7,15 @@ import Layout from "@/components/Layout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
 import CompanyDashboard from "./pages/CompanyDashboard";
 import CandidateDashboard from "./pages/CandidateDashboard";
 import Profile from "./pages/Profile";
-import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLayout from "./pages/admin/AdminLayout";
 
 const queryClient = new QueryClient();
 
@@ -42,13 +44,16 @@ const App = () => (
               <Route
                 path="/candidate/dashboard"
                 element={
-                  <ProtectedRoute requiredRole="CANDIDATE">
+                  <ProtectedRoute requiredRole="CANDIDATO">
                     <CandidateDashboard />
                   </ProtectedRoute>
                 }
               />
-              <Route path="*" element={<NotFound />} />
             </Route>
+            <Route element={<AdminLayout />}>
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

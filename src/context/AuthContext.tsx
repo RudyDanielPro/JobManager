@@ -1,55 +1,109 @@
-import { createContext, useContext, useState, ReactNode } from "react";
-import { User, UserRole, users } from "@/data/mockData";
+import { createContext, useContext, useState, useEffect } from "react";
+import { authService } from "@/lib/authService";
+import type { LoginResponse } from "@/lib/types";
 
 interface AuthContextType {
-  currentUser: User | null;
+  currentUser: LoginResponse | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, role: UserRole) => string | null;
+  login: (identificador: string, password: string) => Promise<{ success: boolean; user?: LoginResponse; error?: string }>;
   logout: () => void;
-  updateProfile: (data: Partial<User>) => void;
+  updateProfile: (data: Partial<LoginResponse>) => void;
+  setIsAuthenticated: (value: boolean) => void;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  currentUser: null,
-  isAuthenticated: false,
-  login: () => null,
-  logout: () => {},
-  updateProfile: () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<LoginResponse | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const login = (email: string, password: string, role: UserRole): string | null => {
-    const user = users.find((u) => u.email === email && u.password === password && u.role === role);
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    const token = localStorage.getItem("token");
+
+    if (savedUser && token) {
+      try {
+        const user = JSON.parse(savedUser) as LoginResponse;
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error("Error al recuperar sesión:", error);
+        authService.logout();
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const login = async (identificador: string, password: string) => {
+  try {
+    const user = await authService.login({ identificador, password });
+    
     if (user) {
-      setCurrentUser({ ...user });
-      return null;
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      return { success: true, user };
     }
-    return "Credenciales incorrectas o rol no coincide";
+    return { success: false, error: "No se pudo obtener la información del usuario" };
+  } catch (error: any) {
+    console.error("Error en login:", error);
+    
+    let errorMessage = "Error al conectar con el servidor";
+    
+    if (error.response) {
+      if (error.response.status === 401) {
+        errorMessage = "Usuario o contraseña incorrectos";
+      } else if (error.response.status === 403) {
+        errorMessage = "Acceso denegado. No tienes permisos.";
+      } else {
+        errorMessage = error.response.data?.message || "Error en el servidor";
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    return { success: false, error: errorMessage };
+  }
+};
+
+  const logout = () => {
+    authService.logout(); 
+    setCurrentUser(null);
+    setIsAuthenticated(false);
   };
 
-  const logout = () => setCurrentUser(null);
-
-  const updateProfile = (data: Partial<User>) => {
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, ...data });
-    }
+  const updateProfile = (data: Partial<LoginResponse>) => {
+    if (!currentUser) return;
+    
+    const updated = { ...currentUser, ...data };
+    setCurrentUser(updated);
+    localStorage.setItem("user", JSON.stringify(updated));
   };
+
+  const value = {
+    currentUser,
+    isAuthenticated,
+    login,
+    logout,
+    updateProfile,
+    setIsAuthenticated
+  };
+
+  if (loading) {
+    return null;
+  }
 
   return (
-    <AuthContext.Provider
-      value={{
-        currentUser,
-        isAuthenticated: !!currentUser,
-        login,
-        logout,
-        updateProfile,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth debe ser usado dentro de un AuthProvider");
+  }
+  return context;
+};

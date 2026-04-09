@@ -1,36 +1,51 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Briefcase, User, LayoutDashboard, Mail, Lock, AlertCircle } from "lucide-react";
-import { UserRole } from "@/data/mockData";
+import { Briefcase, Lock, User, AlertCircle } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [identificador, setIdentificador] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!identificador || !password) {
+      setError("Por favor, rellena todos los campos");
+      return;
+    }
+
+    setLoading(true);
     setError(null);
 
-    if (!email || !password) {
-      setError("Completa todos los campos");
-      return;
-    }
-    if (!selectedRole) {
-      setError("Selecciona un rol para continuar");
-      return;
-    }
+    try {
+      const result = await login(identificador, password);
 
-    const err = login(email, password, selectedRole);
-    if (err) {
-      setError(err);
-      return;
+      if (result.success && result.user) {
+        const userRole = result.user.rol?.toLowerCase();
+
+       if (userRole === "admin") {
+          navigate("/admin/dashboard", { replace: true });
+        } else if (userRole === "recruiter") {
+          navigate("/company/dashboard", { replace: true });
+        } else if (userRole === "candidato") {
+          navigate("/candidate/dashboard", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      } else {
+        setError(result.error || "Credenciales incorrectas");
+      }
+    } catch (err: any) {
+      console.error("Error en login:", err);
+      setError(err.message || "Error al conectar con el servidor");
+    } finally {
+      setLoading(false);
     }
-    navigate(selectedRole === "RECRUITER" ? "/company/dashboard" : "/candidate/dashboard");
   };
 
   return (
@@ -48,88 +63,54 @@ export default function Login() {
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
+              <span>{error}</span>
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Correo electrónico</label>
+            <label htmlFor="identificador" className="text-sm font-medium text-foreground">
+              Correo electrónico o usuario
+            </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@correo.com"
-                className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                id="identificador"
+                type="text"
+                value={identificador}
+                onChange={(e) => setIdentificador(e.target.value)}
+                placeholder="tu@correo.com o nombre_usuario"
+                disabled={loading}
+                autoComplete="username"
+                className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Contraseña</label>
+            <label htmlFor="password" className="text-sm font-medium text-foreground">
+              Contraseña
+            </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                disabled={loading}
+                autoComplete="current-password"
+                className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
-            </div>
-          </div>
-
-          <div className="space-y-2 pt-2">
-            <label className="text-sm font-medium text-foreground">Selecciona tu rol</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedRole("RECRUITER")}
-                className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-                  selectedRole === "RECRUITER"
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                    : "border-border bg-card hover:border-primary/30"
-                }`}
-              >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                  selectedRole === "RECRUITER" ? "bg-primary/20" : "bg-primary/10"
-                }`}>
-                  <LayoutDashboard className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Reclutador</p>
-                  <p className="text-xs text-muted-foreground">Publica ofertas</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedRole("CANDIDATE")}
-                className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-                  selectedRole === "CANDIDATE"
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                    : "border-border bg-card hover:border-primary/30"
-                }`}
-              >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                  selectedRole === "CANDIDATE" ? "bg-primary/20" : "bg-primary/10"
-                }`}>
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Candidato</p>
-                  <p className="text-xs text-muted-foreground">Busca empleo</p>
-                </div>
-              </button>
             </div>
           </div>
 
           <button
             type="submit"
-            className="mt-2 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            disabled={loading}
+            className="mt-2 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Iniciar sesión
+            {loading ? "Iniciando sesión..." : "Iniciar sesión"}
           </button>
 
           <p className="text-center text-sm text-muted-foreground">
@@ -138,8 +119,9 @@ export default function Login() {
               Regístrate aquí
             </Link>
           </p>
-          <p className="text-center text-xs text-muted-foreground">
-            Demo: carlos@technova.com / ana@gmail.com / luis@gmail.com — contraseña: 123456
+
+          <p className="text-center text-xs text-muted-foreground border-t border-border pt-4 mt-4">
+            <span className="font-semibold">Demo:</span> admin (reclutador) / candidato@mail.com (candidato) — contraseña: admin123
           </p>
         </form>
       </div>

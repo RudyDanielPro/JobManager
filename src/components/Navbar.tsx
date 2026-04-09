@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Briefcase, LogOut, User, ChevronDown } from "lucide-react";
+import { Briefcase, LogOut, User, ChevronDown, Shield } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 export default function Navbar() {
@@ -26,6 +26,20 @@ export default function Navbar() {
     navigate("/");
   };
 
+  const getUserInitials = () => {
+    return currentUser?.usuario?.charAt(0).toUpperCase() || "U";
+  };
+
+  const getDisplayName = () => {
+    return currentUser?.usuario || "Usuario";
+  };
+
+  const isRecruiter = currentUser?.rol?.toLowerCase() === "recruiter";
+  const isCandidate = currentUser?.rol?.toLowerCase() === "candidato";
+  const isAdmin = currentUser?.rol?.toLowerCase() === "admin";
+
+  const userFotoUrl = currentUser?.foto?.ruta || currentUser?.fotoUrl;
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
@@ -40,12 +54,17 @@ export default function Navbar() {
           <Link to="/jobs" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
             Ofertas
           </Link>
-          {isAuthenticated && currentUser?.role === "RECRUITER" && (
+          {isAuthenticated && isAdmin && (
+            <Link to="/admin/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              Panel Admin
+            </Link>
+          )}
+          {isAuthenticated && isRecruiter && (
             <Link to="/company/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
               Panel Reclutador
             </Link>
           )}
-          {isAuthenticated && currentUser?.role === "CANDIDATE" && (
+          {isAuthenticated && isCandidate && (
             <Link to="/candidate/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
               Mis Aplicaciones
             </Link>
@@ -59,10 +78,14 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                  {currentUser.avatar}
+                <div className="flex h-6 w-6 overflow-hidden items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                  {userFotoUrl ? (
+                    <img src={userFotoUrl} alt="Perfil" className="h-full w-full object-cover" />
+                  ) : (
+                    getUserInitials()
+                  )}
                 </div>
-                <span className="hidden sm:inline">{currentUser.name}</span>
+                <span className="hidden sm:inline">{getDisplayName()}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
               {menuOpen && (
@@ -114,12 +137,17 @@ export default function Navbar() {
           <Link to="/jobs" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
             Ofertas
           </Link>
-          {isAuthenticated && currentUser?.role === "RECRUITER" && (
+          {isAuthenticated && isAdmin && (
+            <Link to="/admin/dashboard" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+              Panel Admin
+            </Link>
+          )}
+          {isAuthenticated && isRecruiter && (
             <Link to="/company/dashboard" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
               Panel Reclutador
             </Link>
           )}
-          {isAuthenticated && currentUser?.role === "CANDIDATE" && (
+          {isAuthenticated && isCandidate && (
             <Link to="/candidate/dashboard" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
               Mis Aplicaciones
             </Link>

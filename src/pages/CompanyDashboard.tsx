@@ -1,24 +1,71 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getJobsForRecruiter } from "@/data/mockData";
-import { Plus, Briefcase, Users, X } from "lucide-react";
+import { ofertasService, type OfertaResponse } from "@/lib/ofertasService";
+import { Plus, Briefcase, Users, X, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 export default function CompanyDashboard() {
   const { currentUser } = useAuth();
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newJob, setNewJob] = useState({ title: "", location: "", salary: "", description: "" });
+  const [ofertas, setOfertas] = useState<OfertaResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newJob, setNewJob] = useState({ 
+    titulo: "", 
+    ubicacion: "", 
+    rangoSalarial: "", 
+    descripcion: "" 
+  });
 
-  const jobs = getJobsForRecruiter(currentUser?.id || "");
+  useEffect(() => {
+    const fetchOfertas = async () => {
+      if (!currentUser) return;
+      try {
+        const response = await ofertasService.misOfertas(0, 100);
+        setOfertas(response.content);
+      } catch (error) {
+        console.error("Error cargando ofertas:", error);
+        toast.error("Error al cargar tus ofertas");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOfertas();
+  }, [currentUser]);
 
-  const handleCreateJob = () => {
-    if (newJob.title && newJob.location) {
-      toast.success("Oferta creada correctamente", { description: newJob.title });
+  const ofertasActivas = ofertas.filter((o) => o.estado);
+
+  const handleCreateJob = async () => {
+    if (!newJob.titulo || !newJob.ubicacion) {
+      toast.error("Completa los campos obligatorios");
+      return;
+    }
+
+    try {
+      await ofertasService.crear({
+        titulo: newJob.titulo,
+        descripcion: newJob.descripcion,
+        ubicacion: newJob.ubicacion,
+        rangoSalarial: newJob.rangoSalarial,
+      });
+      toast.success("Oferta creada correctamente");
       setShowCreateForm(false);
-      setNewJob({ title: "", location: "", salary: "", description: "" });
+      setNewJob({ titulo: "", ubicacion: "", rangoSalarial: "", descripcion: "" });
+      const response = await ofertasService.misOfertas(0, 100);
+      setOfertas(response.content);
+    } catch (error) {
+      console.error("Error creando oferta:", error);
+      toast.error("Error al crear la oferta");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -43,7 +90,7 @@ export default function CompanyDashboard() {
               <Briefcase className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{jobs.length}</p>
+              <p className="text-2xl font-bold text-foreground">{ofertas.length}</p>
               <p className="text-sm text-muted-foreground">Ofertas publicadas</p>
             </div>
           </div>
@@ -54,7 +101,7 @@ export default function CompanyDashboard() {
               <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{jobs.reduce((acc, j) => acc + j.applicationCount, 0)}</p>
+              <p className="text-2xl font-bold text-foreground">0</p>
               <p className="text-sm text-muted-foreground">Total aplicaciones</p>
             </div>
           </div>
@@ -65,7 +112,7 @@ export default function CompanyDashboard() {
               <Briefcase className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{jobs.length}</p>
+              <p className="text-2xl font-bold text-foreground">{ofertasActivas.length}</p>
               <p className="text-sm text-muted-foreground">Ofertas activas</p>
             </div>
           </div>
@@ -75,27 +122,35 @@ export default function CompanyDashboard() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-foreground mb-4">Tus ofertas</h2>
         <div className="space-y-3">
-          {jobs.map((job) => (
-            <Link key={job.id} to={`/jobs/${job.id}`} className="block">
-              <div className="card-hover flex items-center justify-between rounded-xl border border-border bg-card p-5">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                    {job.company?.logo}
+          {ofertas.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-12 text-center">
+              <Briefcase className="mx-auto h-10 w-10 text-muted-foreground" />
+              <p className="mt-3 text-muted-foreground">Aún no has publicado ninguna oferta.</p>
+            </div>
+          ) : (
+            ofertas.map((job) => (
+              <Link key={job.id} to={`/jobs/${job.id}`} className="block">
+                <div className="card-hover flex flex-col items-start justify-between rounded-xl border border-border bg-card p-5 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
+                      {job.nombreEmpresa?.charAt(0) || "E"}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{job.titulo}</p>
+                      <p className="text-sm text-muted-foreground">{job.nombreEmpresa} · {job.ubicacion}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{job.title}</p>
-                    <p className="text-sm text-muted-foreground">{job.company?.name} · {job.location}</p>
+                  <div className="flex items-center gap-4 mt-3 sm:mt-0">
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      job.estado ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                    }`}>
+                      {job.estado ? "Activa" : "Inactiva"}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Users className="h-3.5 w-3.5" /> {job.applicationCount} aplicaciones
-                  </span>
-                  <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Activa</span>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          )}
         </div>
       </div>
 
@@ -111,29 +166,29 @@ export default function CompanyDashboard() {
             <div className="mt-4 space-y-3">
               <input
                 type="text"
-                placeholder="Título del puesto"
-                value={newJob.title}
-                onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
+                placeholder="Título del puesto *"
+                value={newJob.titulo}
+                onChange={(e) => setNewJob({ ...newJob, titulo: e.target.value })}
                 className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <input
                 type="text"
-                placeholder="Ubicación"
-                value={newJob.location}
-                onChange={(e) => setNewJob({ ...newJob, location: e.target.value })}
+                placeholder="Ubicación *"
+                value={newJob.ubicacion}
+                onChange={(e) => setNewJob({ ...newJob, ubicacion: e.target.value })}
                 className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <input
                 type="text"
-                placeholder="Salario (ej. 40.000€ - 55.000€)"
-                value={newJob.salary}
-                onChange={(e) => setNewJob({ ...newJob, salary: e.target.value })}
+                placeholder="Rango salarial (ej. 40.000€ - 55.000€)"
+                value={newJob.rangoSalarial}
+                onChange={(e) => setNewJob({ ...newJob, rangoSalarial: e.target.value })}
                 className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <textarea
                 placeholder="Descripción del puesto"
-                value={newJob.description}
-                onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
+                value={newJob.descripcion}
+                onChange={(e) => setNewJob({ ...newJob, descripcion: e.target.value })}
                 className="h-28 w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -143,7 +198,7 @@ export default function CompanyDashboard() {
               </button>
               <button
                 onClick={handleCreateJob}
-                disabled={!newJob.title || !newJob.location}
+                disabled={!newJob.titulo || !newJob.ubicacion}
                 className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Publicar oferta

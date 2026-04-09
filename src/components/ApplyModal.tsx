@@ -1,16 +1,19 @@
 import { useState, useRef } from "react";
 import { X, Upload, FileText } from "lucide-react";
+import { toast } from "sonner";
+import { Cancel } from "@radix-ui/react-alert-dialog";
 
 interface ApplyModalProps {
   jobTitle: string;
   companyName: string;
   onClose: () => void;
-  onSubmit: (coverLetter: string, fileName: string) => void;
+  onSubmit: (coverLetter: string, file: File) => void; 
 }
 
 export default function ApplyModal({ jobTitle, companyName, onClose, onSubmit }: ApplyModalProps) {
   const [coverLetter, setCoverLetter] = useState("");
   const [fileName, setFileName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -25,17 +28,25 @@ export default function ApplyModal({ jobTitle, companyName, onClose, onSubmit }:
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) setFileName(file.name);
+    if (file) {
+      setFileName(file.name);
+      setSelectedFile(file);
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setFileName(file.name);
+    if (file) {
+      setFileName(file.name);
+      setSelectedFile(file);
+    }
   };
 
   const handleSubmit = () => {
-    if (coverLetter.trim() && fileName) {
-      onSubmit(coverLetter, fileName);
+    if (coverLetter.trim() && selectedFile) {
+      onSubmit(coverLetter, selectedFile);
+    } else {
+      toast.error("Por favor adjunta tu CV y escribe un mensaje");
     }
   };
 
@@ -100,11 +111,11 @@ export default function ApplyModal({ jobTitle, companyName, onClose, onSubmit }:
 
         <div className="mt-6 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-            Cancelar
+            <Cancel /> Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!coverLetter.trim() || !fileName}
+            disabled={!coverLetter.trim() || !selectedFile}
             className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Enviar aplicación

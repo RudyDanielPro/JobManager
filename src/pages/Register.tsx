@@ -1,70 +1,89 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { UserRole, users } from "@/data/mockData";
-import { useAuth } from "@/context/AuthContext";
-import { Mail, Lock, User, Phone, MapPin, Briefcase, LayoutDashboard, AlertCircle, CheckCircle, Bell, Shield } from "lucide-react";
+import { Mail, Lock, User, Briefcase, LayoutDashboard, AlertCircle, CheckCircle, Bell, Shield } from "lucide-react";
+import { authService } from "@/lib/authService";
+import type { RegisterData } from "@/lib/authService";
+
+type UserRole = "reclutador" | "candidato";
 
 export default function Register() {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [form, setForm] = useState({
-    name: "",
+    nombre: "",
+    apellido: "",
+    usuario: "",
     email: "",
     password: "",
     confirmPassword: "",
-    phone: "",
-    location: "",
+    url: "",
   });
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const update = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
 
-    if (!form.name || !form.email || !form.password || !form.confirmPassword) {
-      setError("Completa todos los campos obligatorios");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!form.email.endsWith("@gmail.com")) {
+      setError("El correo debe ser de Gmail");
       return;
     }
-    if (!selectedRole) {
-      setError("Selecciona un rol para continuar");
+    if (!form.nombre || !form.apellido || !form.usuario || !form.email || !form.password || !form.confirmPassword || !selectedRole) {
+      setError("Por favor, rellena todos los campos");
       return;
     }
+    
     if (form.password !== form.confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
-    if (form.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres");
-      return;
-    }
-    if (users.find((u) => u.email === form.email)) {
-      setError("Ya existe una cuenta con ese correo electrónico");
+    
+    if (selectedRole === "reclutador" && !form.url) {
+      setError("La dirección web es obligatoria para reclutadores");
       return;
     }
 
-    const newUser = {
-      id: `u${users.length + 1}`,
-      name: form.name,
-      email: form.email,
-      password: form.password,
-      role: selectedRole,
-      avatar: form.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2),
-      phone: form.phone || undefined,
-      location: form.location || undefined,
-      bio: "",
-    };
+    setLoading(true);
+    setError(null);
 
-    users.push(newUser);
-    setSuccess(true);
-
-    setTimeout(() => {
-      login(form.email, form.password, selectedRole);
-      navigate(selectedRole === "RECRUITER" ? "/company/dashboard" : "/candidate/dashboard");
-    }, 1500);
+    try {
+      const userData: RegisterData = {
+        nombre: form.nombre,
+        apellido: form.apellido,
+        usuario: form.usuario,
+        email: form.email,
+        password: form.password,
+        rol: selectedRole,
+      };
+      
+      if (selectedRole === "reclutador") {
+        userData.nombreEmpresa = form.nombre;
+        userData.descripcion = "";
+        userData.url = form.url;
+      }
+      
+      await authService.register(userData, selectedFile || undefined);
+      
+      setSuccess(true);
+      setTimeout(() => navigate("/login"), 1500);
+    } catch (err: any) {
+      console.error("Error completo:", err);
+      const errorMessage = err.response?.data || err.message || "Error al registrar usuario";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -74,9 +93,7 @@ export default function Register() {
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
             <Briefcase className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h2 className="text-3xl font-bold text-foreground">
-            Bienvenido a DevJobs
-          </h2>
+          <h2 className="text-3xl font-bold text-foreground">Bienvenido a DevJobs</h2>
           <div className="space-y-6">
             <div className="flex items-start gap-4 rounded-xl border border-primary/20 bg-card p-5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -85,7 +102,7 @@ export default function Register() {
               <div>
                 <p className="font-semibold text-foreground">Usa tu correo de Gmail</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Por favor asegúrese de que su correo sea el correo de Gmail. Ahí le llegarán todas las notificaciones de la plataforma.
+                  Por favor asegúrate de que tu correo sea de Gmail. Ahí te llegarán todas las notificaciones.
                 </p>
               </div>
             </div>
@@ -96,7 +113,7 @@ export default function Register() {
               <div>
                 <p className="font-semibold text-foreground">Notificaciones en tiempo real</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Recibirás alertas sobre nuevas ofertas, cambios de estado en tus aplicaciones y mensajes de reclutadores.
+                  Recibirás alertas sobre nuevas ofertas y cambios en tus aplicaciones.
                 </p>
               </div>
             </div>
@@ -107,7 +124,7 @@ export default function Register() {
               <div>
                 <p className="font-semibold text-foreground">Datos seguros</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Tu información personal está protegida y nunca será compartida sin tu consentimiento.
+                  Tu información está protegida y nunca se compartirá sin tu consentimiento.
                 </p>
               </div>
             </div>
@@ -126,14 +143,14 @@ export default function Register() {
             <div className="mt-8 flex flex-col items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-8 text-center">
               <CheckCircle className="h-12 w-12 text-primary" />
               <p className="text-lg font-semibold text-foreground">¡Registro exitoso!</p>
-              <p className="text-sm text-muted-foreground">Redirigiendo a tu panel...</p>
+              <p className="text-sm text-muted-foreground">Redirigiendo al login...</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               {error && (
                 <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                   <AlertCircle className="h-4 w-4 shrink-0" />
-                  {error}
+                  <span>{error}</span>
                 </div>
               )}
 
@@ -141,21 +158,63 @@ export default function Register() {
                 <div className="flex items-start gap-3">
                   <Mail className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground">Usa tu correo de Gmail.</span> Ahí le llegarán todas las notificaciones de la plataforma.
+                    <span className="font-semibold text-foreground">Usa tu correo de Gmail.</span> Ahí te llegarán las notificaciones.
                   </p>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Nombre completo *</label>
+                <label className="text-sm font-medium text-foreground">Foto de perfil</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  disabled={loading}
+                  className="flex h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary focus:border-primary focus:outline-none disabled:opacity-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Nombre *</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="text"
-                    value={form.name}
-                    onChange={(e) => update("name", e.target.value)}
-                    placeholder="Tu nombre completo"
-                    className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    value={form.nombre}
+                    onChange={(e) => update("nombre", e.target.value)}
+                    placeholder="Tu nombre"
+                    disabled={loading}
+                    className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Apellido *</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={form.apellido}
+                    onChange={(e) => update("apellido", e.target.value)}
+                    placeholder="Tu apellido"
+                    disabled={loading}
+                    className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Usuario *</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={form.usuario}
+                    onChange={(e) => update("usuario", e.target.value)}
+                    placeholder="Nombre de usuario"
+                    disabled={loading}
+                    className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -169,7 +228,8 @@ export default function Register() {
                     value={form.email}
                     onChange={(e) => update("email", e.target.value)}
                     placeholder="tu@gmail.com"
-                    className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    disabled={loading}
+                    className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -184,7 +244,8 @@ export default function Register() {
                       value={form.password}
                       onChange={(e) => update("password", e.target.value)}
                       placeholder="••••••••"
-                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      disabled={loading}
+                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -197,55 +258,45 @@ export default function Register() {
                       value={form.confirmPassword}
                       onChange={(e) => update("confirmPassword", e.target.value)}
                       placeholder="••••••••"
-                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      disabled={loading}
+                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {selectedRole === "reclutador" && (
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-foreground">Teléfono</label>
+                  <label className="text-sm font-medium text-foreground">Dirección web de la empresa *</label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Briefcase className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
-                      type="tel"
-                      value={form.phone}
-                      onChange={(e) => update("phone", e.target.value)}
-                      placeholder="+34 600 000 000"
-                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      type="url"
+                      value={form.url}
+                      onChange={(e) => update("url", e.target.value)}
+                      placeholder="https://empresa.com"
+                      disabled={loading}
+                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                     />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-foreground">Ubicación</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={form.location}
-                      onChange={(e) => update("location", e.target.value)}
-                      placeholder="Madrid, España"
-                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
 
               <div className="space-y-2 pt-2">
                 <label className="text-sm font-medium text-foreground">Selecciona tu rol *</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setSelectedRole("RECRUITER")}
+                    onClick={() => setSelectedRole("reclutador")}
+                    disabled={loading}
                     className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-                      selectedRole === "RECRUITER"
+                      selectedRole === "reclutador"
                         ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                         : "border-border bg-card hover:border-primary/30"
-                    }`}
+                    } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                      selectedRole === "RECRUITER" ? "bg-primary/20" : "bg-primary/10"
+                      selectedRole === "reclutador" ? "bg-primary/20" : "bg-primary/10"
                     }`}>
                       <LayoutDashboard className="h-5 w-5 text-primary" />
                     </div>
@@ -256,15 +307,16 @@ export default function Register() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSelectedRole("CANDIDATE")}
+                    onClick={() => setSelectedRole("candidato")}
+                    disabled={loading}
                     className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-                      selectedRole === "CANDIDATE"
+                      selectedRole === "candidato"
                         ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                         : "border-border bg-card hover:border-primary/30"
-                    }`}
+                    } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                      selectedRole === "CANDIDATE" ? "bg-primary/20" : "bg-primary/10"
+                      selectedRole === "candidato" ? "bg-primary/20" : "bg-primary/10"
                     }`}>
                       <User className="h-5 w-5 text-primary" />
                     </div>
@@ -278,9 +330,10 @@ export default function Register() {
 
               <button
                 type="submit"
-                className="mt-2 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                disabled={loading}
+                className="mt-2 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Crear cuenta
+                {loading ? "Registrando..." : "Crear cuenta"}
               </button>
 
               <p className="text-center text-sm text-muted-foreground">

@@ -1,21 +1,45 @@
-import { useState } from "react";
+// pages/Index.tsx
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, ArrowRight, Briefcase, Users, Building2 } from "lucide-react";
-import { jobOffers } from "@/data/mockData";
+import { Search, ArrowRight, Briefcase, Users, Building2, Loader2 } from "lucide-react";
+import { ofertasService, type OfertaResponse } from "@/lib/ofertasService";
 import JobCard from "@/components/JobCard";
+import { toast } from "sonner";
 
 export default function Index() {
   const [search, setSearch] = useState("");
+  const [ofertas, setOfertas] = useState<OfertaResponse[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = jobOffers
-    .filter((j) =>
-      j.title.toLowerCase().includes(search.toLowerCase()) ||
-      j.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
-    )
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const data = await ofertasService.listarActivas(0, 6);
+        setOfertas(data.content || []);
+      } catch (error) {
+        console.error("Error cargando ofertas:", error);
+        toast.error("Error al cargar las ofertas de empleo");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJobs();
+  }, []);
+
+  const filtered = ofertas
+    .filter((j) => {
+      const searchLower = search.toLowerCase();
+      return (
+        j.titulo?.toLowerCase().includes(searchLower) ||
+        j.nombreEmpresa?.toLowerCase().includes(searchLower) ||
+        j.ubicacion?.toLowerCase().includes(searchLower)
+      );
+    })
     .slice(0, 6);
 
   return (
     <div>
+      {/* Hero Section */}
       <section className="relative overflow-hidden bg-card border-b border-border">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.08),transparent_70%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-20 text-center md:py-28">
@@ -25,14 +49,14 @@ export default function Index() {
               <span className="text-primary"> empleo tech</span>
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
-              Conectamos a los mejores talentos con las empresas tecnológicas más innovadoras de España.
+              Conectamos a los mejores talentos con las empresas tecnológicas más innovadoras.
             </p>
             <div className="mt-8 flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Busca por título, tecnología..."
+                  placeholder="Busca por título, empresa o ubicación..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-12 w-full rounded-xl border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -50,6 +74,7 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Stats Section */}
       <section className="mx-auto max-w-6xl px-4 py-12">
         <div className="grid gap-6 sm:grid-cols-3">
           <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-5">
@@ -57,7 +82,7 @@ export default function Index() {
               <Briefcase className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{jobOffers.length}+</p>
+              <p className="text-2xl font-bold text-foreground">{ofertas.length}+</p>
               <p className="text-sm text-muted-foreground">Ofertas activas</p>
             </div>
           </div>
@@ -82,6 +107,7 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Featured Jobs Section */}
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Ofertas destacadas</h2>
@@ -90,9 +116,17 @@ export default function Index() {
           </Link>
         </div>
         <div className="mt-5 grid gap-3">
-          {filtered.map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
+          {loading ? (
+            <div className="flex h-64 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filtered.length > 0 ? (
+            filtered.map((job) => <JobCard key={job.id} job={job} />)
+          ) : (
+            <div className="rounded-xl border border-border bg-card p-12 text-center">
+              <p className="text-muted-foreground">No se encontraron ofertas.</p>
+            </div>
+          )}
         </div>
       </section>
     </div>
