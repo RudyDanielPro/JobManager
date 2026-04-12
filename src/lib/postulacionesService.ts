@@ -52,10 +52,5 @@ export const postulacionesService = {
       params: { page, size }
     });
     return response.data;
-  },
-
-  cambiarEstado: async (postulacionId: number, estado: boolean): Promise<PostulacionResponse> => {
-    const response = await api.patch(`/postulaciones/${postulacionId}/estado`, { estado });
-    return response.data;
   }
 };

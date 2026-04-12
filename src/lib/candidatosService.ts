@@ -38,12 +38,9 @@ export const candidatosService = {
     return response.data;
   },
 
-  actualizarFoto: async (id: number, foto: File): Promise<CandidatoResponse> => {
-    const formData = new FormData();
-    formData.append('foto', foto);
-    const response = await api.put(`/candidatos/${id}/foto`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+  actualizarFoto: async (id: number, fotoUrlBase64: string): Promise<CandidatoResponse> => {
+    // El backend documenta consumir application/json con formato { "foto": "string" }
+    const response = await api.put(`/candidatos/${id}/foto`, { foto: fotoUrlBase64 });
     return response.data;
   },
 

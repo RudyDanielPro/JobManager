@@ -65,6 +65,7 @@ export default function Profile() {
     if (file) {
       setSelectedFile(file);
       const reader = new FileReader();
+      // Almacenamos el resultado en Base64 para mostrar el preview y para enviarlo al backend
       reader.onloadend = () => setAvatarPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
@@ -81,8 +82,9 @@ export default function Profile() {
           apellido: apellido,
         });
         
-        if (selectedFile) {
-          await candidatosService.actualizarFoto(currentUser.id, selectedFile);
+        // Enviamos el string en Base64 (avatarPreview) en lugar del objeto File
+        if (selectedFile && avatarPreview) {
+          await candidatosService.actualizarFoto(currentUser.id, avatarPreview);
         }
         
         toast.success("Perfil actualizado correctamente");
@@ -93,8 +95,9 @@ export default function Profile() {
           url: url,
         });
         
-        if (selectedFile) {
-          await empresasService.actualizarLogo(currentUser.id, selectedFile);
+        // Enviamos el string en Base64 (avatarPreview) en lugar del objeto File
+        if (selectedFile && avatarPreview) {
+          await empresasService.actualizarLogo(currentUser.id, avatarPreview);
         }
         
         toast.success("Perfil actualizado correctamente");
@@ -104,9 +107,9 @@ export default function Profile() {
           apellido: apellido,
         });
         
-        if (selectedFile) {
-          await adminService.updateAdminFoto(currentUser.id, selectedFile);
-        }
+        // Nota: El Swagger de Spring Boot actual no tiene un endpoint dedicado 
+        // para cambiar la foto del admin de forma aislada. Si lo añades al backend,
+        // puedes implementarlo aquí. Por ahora, se omite para evitar un error 404.
         
         toast.success("Perfil actualizado correctamente");
       }

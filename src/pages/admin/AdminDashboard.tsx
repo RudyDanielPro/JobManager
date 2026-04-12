@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { useAdminData } from './hooks/useAdminData';
+import { useAdminData } from './hooks/useAdminData'; // Asegura la ruta de tu hook
 import AdminHeader from './components/AdminHeader';
 import AdminSidebar, { TabType } from './components/AdminSidebar';
 import AdminStats from './components/AdminStats';
@@ -44,6 +44,7 @@ export default function AdminDashboard() {
     deleteCompany,
     toggleOfferStatus,
     deleteOffer,
+    updatePostulationStatus
   } = useAdminData();
 
   if (!isAuthenticated || currentUser?.rol?.toLowerCase() !== 'admin') {
@@ -180,6 +181,7 @@ export default function AdminDashboard() {
                   totalPages={totalPages}
                   currentPage={currentPage}
                   onPageChange={setCurrentPage}
+                  onToggleStatus={(postulation) => updatePostulationStatus(postulation.id, !postulation.estado)}
                 />
               )}
             </>

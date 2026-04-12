@@ -1,195 +1,7 @@
-import * as React from "react";
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { adminService, DashboardStats } from '@/lib/adminService';
-import { User, Empresa, OfertaLaboral, Postulacion } from '@/lib/types';
-
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
-
-type ToasterToast = ToastProps & {
-  id: string;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  action?: ToastActionElement;
-};
-
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
-} as const;
-
-let count = 0;
-
-function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER;
-  return count.toString();
-}
-
-type ActionType = typeof actionTypes;
-
-type Action =
-  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast; }
-  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast>; }
-  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"]; }
-  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"]; };
-
-interface State {
-  toasts: ToasterToast[];
-}
-
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return;
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId);
-    dispatch({
-      type: "REMOVE_TOAST",
-      toastId: toastId,
-    });
-  }, TOAST_REMOVE_DELAY);
-
-  toastTimeouts.set(toastId, timeout);
-};
-
-export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-      };
-
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map((t) => (t.id === action.toast.id ? { ...t, ...action.toast } : t)),
-      };
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action;
-
-      if (toastId) {
-        addToRemoveQueue(toastId);
-      } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id);
-        });
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
-            : t,
-        ),
-      };
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return {
-          ...state,
-          toasts: [],
-        };
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter((t) => t.id !== action.toastId),
-      };
-  }
-};
-
-const listeners: Array<(state: State) => void> = [];
-
-let memoryState: State = { toasts: [] };
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action);
-  listeners.forEach((listener) => {
-    listener(memoryState);
-  });
-}
-
-type Toast = Omit<ToasterToast, "id">;
-
-function toast({ ...props }: Toast) {
-  const id = genId();
-
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
-    });
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss();
-      },
-    },
-  });
-
-  return {
-    id: id,
-    dismiss,
-    update,
-  };
-}
-
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState);
-
-  React.useEffect(() => {
-    listeners.push(setState);
-    return () => {
-      const index = listeners.indexOf(setState);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    };
-  }, [state]);
-
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-  };
-}
-
-export { useToast, toast };
-
-const MOBILE_BREAKPOINT = 768;
-
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    };
-    mql.addEventListener("change", onChange);
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
-
-  return !!isMobile;
-}
+import type { User, Empresa, OfertaLaboral, Postulacion } from '@/lib/types';
 
 const defaultStats: DashboardStats = {
   totalUsers: 0,
@@ -215,7 +27,6 @@ export function useAdminData() {
   const loadStats = useCallback(async () => {
     try {
       const data = await adminService.getStats();
-      
       let totalAdmins = data.totalAdmins;
       
       if (totalAdmins === undefined || totalAdmins === null) {
@@ -292,13 +103,17 @@ export function useAdminData() {
     }
   }, []);
 
+  // --- CRUD ACTIONS ---
+
   const createUser = async (user: Partial<User>) => {
     try {
       await adminService.createUser(user);
       await loadUsers(currentPage);
       await loadStats();
+      toast.success('Usuario creado con éxito');
     } catch (error) {
       console.error('Error creating user:', error);
+      toast.error('Error al crear el usuario');
       throw error;
     }
   };
@@ -308,8 +123,10 @@ export function useAdminData() {
       await adminService.updateUser(id, user);
       await loadUsers(currentPage);
       await loadStats();
+      toast.success('Usuario actualizado');
     } catch (error) {
       console.error('Error updating user:', error);
+      toast.error('Error al actualizar el usuario');
       throw error;
     }
   };
@@ -319,8 +136,10 @@ export function useAdminData() {
       await adminService.updateUserRole(userId, newRole);
       await loadUsers(currentPage);
       await loadStats();
+      toast.success('Rol de usuario modificado');
     } catch (error) {
       console.error('Error updating user role:', error);
+      toast.error('Error al cambiar el rol');
     }
   };
 
@@ -329,8 +148,10 @@ export function useAdminData() {
       await adminService.deleteUser(userId);
       await loadUsers(currentPage);
       await loadStats();
+      toast.success('Usuario eliminado permanentemente');
     } catch (error) {
       console.error('Error deleting user:', error);
+      toast.error('No se pudo eliminar el usuario');
     }
   };
 
@@ -339,8 +160,10 @@ export function useAdminData() {
       await adminService.deleteCompany(companyId);
       await loadCompanies(currentPage);
       await loadStats();
+      toast.success('Empresa eliminada');
     } catch (error) {
       console.error('Error deleting company:', error);
+      toast.error('No se pudo eliminar la empresa');
     }
   };
 
@@ -349,8 +172,10 @@ export function useAdminData() {
       await adminService.toggleOfferStatus(offerId);
       await loadOffers(currentPage);
       await loadStats();
+      toast.success('Estado de la oferta actualizado');
     } catch (error) {
       console.error('Error toggling offer:', error);
+      toast.error('Error al cambiar el estado de la oferta');
     }
   };
 
@@ -359,8 +184,22 @@ export function useAdminData() {
       await adminService.deleteOffer(offerId);
       await loadOffers(currentPage);
       await loadStats();
+      toast.success('Oferta eliminada');
     } catch (error) {
       console.error('Error deleting offer:', error);
+      toast.error('Error al eliminar la oferta');
+    }
+  };
+
+  const updatePostulationStatus = async (postulationId: number, estado: boolean) => {
+    try {
+      await adminService.updatePostulationStatus(postulationId, estado);
+      await loadPostulations(currentPage);
+      await loadStats();
+      toast.success('Postulación actualizada correctamente');
+    } catch (error) {
+      console.error('Error updating postulation:', error);
+      toast.error('Error al cambiar el estado de la postulación');
     }
   };
 
@@ -387,5 +226,6 @@ export function useAdminData() {
     deleteCompany,
     toggleOfferStatus,
     deleteOffer,
+    updatePostulationStatus
   };
 }

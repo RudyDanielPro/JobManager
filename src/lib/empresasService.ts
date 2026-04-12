@@ -44,12 +44,9 @@ export const empresasService = {
     return response.data;
   },
 
-  actualizarLogo: async (id: number, logo: File): Promise<EmpresaResponse> => {
-    const formData = new FormData();
-    formData.append('logo', logo);
-    const response = await api.put(`/empresas/${id}/logo`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+  actualizarLogo: async (id: number, logoUrlBase64: string): Promise<EmpresaResponse> => {
+    // El backend documenta consumir application/json con formato { "logo": "string" }
+    const response = await api.put(`/empresas/${id}/logo`, { logo: logoUrlBase64 });
     return response.data;
   },
 
