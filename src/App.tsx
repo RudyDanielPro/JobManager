@@ -26,6 +26,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Todas las rutas con Layout (incluye Navbar) */}
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
@@ -33,6 +34,8 @@ const App = () => (
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/jobs/:id" element={<JobDetail />} />
               <Route path="/profile" element={<Profile />} />
+              
+              {/* Rutas protegidas con Layout */}
               <Route
                 path="/company/dashboard"
                 element={
@@ -41,6 +44,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              {/* Nueva ruta: Ver ofertas de la empresa (competencia) */}
               <Route
                 path="/candidate/dashboard"
                 element={
@@ -50,9 +54,19 @@ const App = () => (
                 }
               />
             </Route>
+            
+            {/* Admin routes */}
             <Route element={<AdminLayout />}>
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

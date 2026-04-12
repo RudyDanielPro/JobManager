@@ -22,9 +22,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const savedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
 
+    console.log("🔵 AuthProvider - Cargando sesión guardada");
+    console.log("🔵 Token existe:", !!token);
+    console.log("🔵 User guardado:", savedUser);
+
     if (savedUser && token) {
       try {
         const user = JSON.parse(savedUser) as LoginResponse;
+        console.log("🔵 Usuario recuperado del localStorage:", user);
+        console.log("🔵 Rol del usuario recuperado:", user.rol);
         setCurrentUser(user);
         setIsAuthenticated(true);
       } catch (error) {
@@ -36,37 +42,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (identificador: string, password: string) => {
-  try {
-    const user = await authService.login({ identificador, password });
+    console.log("🔵 AuthContext.login - Iniciando login para:", identificador);
     
-    if (user) {
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      return { success: true, user };
-    }
-    return { success: false, error: "No se pudo obtener la información del usuario" };
-  } catch (error: any) {
-    console.error("Error en login:", error);
-    
-    let errorMessage = "Error al conectar con el servidor";
-    
-    if (error.response) {
-      if (error.response.status === 401) {
-        errorMessage = "Usuario o contraseña incorrectos";
-      } else if (error.response.status === 403) {
-        errorMessage = "Acceso denegado. No tienes permisos.";
-      } else {
-        errorMessage = error.response.data?.message || "Error en el servidor";
+    try {
+      const user = await authService.login({ identificador, password });
+      
+      console.log("🔵 AuthContext.login - Usuario recibido del servicio:", user);
+      console.log("🔵 AuthContext.login - Rol del usuario:", user?.rol);
+      console.log("🔵 AuthContext.login - Email:", user?.email);
+      console.log("🔵 AuthContext.login - ID:", user?.id);
+      
+      if (user) {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        console.log("🔵 AuthContext.login - Login exitoso, usuario guardado");
+        return { success: true, user };
       }
-    } else if (error.message) {
-      errorMessage = error.message;
+      console.log("🔵 AuthContext.login - No se recibió usuario");
+      return { success: false, error: "No se pudo obtener la información del usuario" };
+    } catch (error: any) {
+      console.error("🔴 AuthContext.login - Error:", error);
+      
+      let errorMessage = "Error al conectar con el servidor";
+      
+      if (error.response) {
+        console.log("🔴 Status code:", error.response.status);
+        console.log("🔴 Response data:", error.response.data);
+        
+        if (error.response.status === 401) {
+          errorMessage = "Usuario o contraseña incorrectos";
+        } else if (error.response.status === 403) {
+          errorMessage = "Acceso denegado. No tienes permisos.";
+        } else {
+          errorMessage = error.response.data?.message || "Error en el servidor";
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return { success: false, error: errorMessage };
     }
-    
-    return { success: false, error: errorMessage };
-  }
-};
+  };
 
   const logout = () => {
+    console.log("🔵 AuthContext.logout - Cerrando sesión");
     authService.logout(); 
     setCurrentUser(null);
     setIsAuthenticated(false);
@@ -78,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const updated = { ...currentUser, ...data };
     setCurrentUser(updated);
     localStorage.setItem("user", JSON.stringify(updated));
+    console.log("🔵 AuthContext.updateProfile - Perfil actualizado:", updated);
   };
 
   const value = {

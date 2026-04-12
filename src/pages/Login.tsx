@@ -24,17 +24,30 @@ export default function Login() {
 
     try {
       const result = await login(identificador, password);
+      
+      console.log("🔵 DEBUG LOGIN - Resultado completo:", result);
+      console.log("🔵 DEBUG LOGIN - User:", result.user);
+      console.log("🔵 DEBUG LOGIN - Rol del usuario:", result.user?.rol);
 
       if (result.success && result.user) {
         const userRole = result.user.rol?.toLowerCase();
-
-       if (userRole === "admin") {
+        console.log("🔵 DEBUG LOGIN - Rol en minúsculas:", userRole);
+        
+        // Redirección según el rol - CORREGIDO
+        if (userRole === "admin") {
+          console.log("🔵 Redirigiendo a /admin/dashboard");
           navigate("/admin/dashboard", { replace: true });
-        } else if (userRole === "recruiter") {
+        } 
+        else if (userRole === "recruiter" || userRole === "reclutador") {
+          console.log("🔵 Redirigiendo a /company/dashboard");
           navigate("/company/dashboard", { replace: true });
-        } else if (userRole === "candidato") {
+        } 
+        else if (userRole === "candidato") {
+          console.log("🔵 Redirigiendo a /candidate/dashboard");
           navigate("/candidate/dashboard", { replace: true });
-        } else {
+        } 
+        else {
+          console.log("🔵 Rol no reconocido:", userRole, "redirigiendo a /");
           navigate("/", { replace: true });
         }
       } else {
