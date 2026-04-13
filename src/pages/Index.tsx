@@ -5,25 +5,55 @@ import { Search, ArrowRight, Briefcase, Users, Building2, Loader2 } from "lucide
 import { ofertasService, type OfertaResponse } from "@/lib/ofertasService";
 import JobCard from "@/components/JobCard";
 import { toast } from "sonner";
+import { empresasService, type EmpresaResponse } from "@/lib/empresasService";
+import { candidatosService, type CandidatoResponse } from "@/lib/candidatosService";
 
 export default function Index() {
   const [search, setSearch] = useState("");
   const [ofertas, setOfertas] = useState<OfertaResponse[]>([]);
+  const [totalOfertas, setTotalOfertas] = useState(0);
+  const [totalEmpresas, setTotalEmpresas] = useState(0);
+  const [totalCandidatos, setTotalCandidatos] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchJobs = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const data = await ofertasService.listarActivas(0, 6);
-        setOfertas(data.content || []);
+        // Cargar ofertas destacadas (primeras 6 activas)
+        const ofertasData = await ofertasService.listarActivas(0, 6);
+        setOfertas(ofertasData.content || []);
+        
+        // Cargar total de ofertas activas
+        const totalOfertasData = await ofertasService.listarActivas(0, 1);
+        setTotalOfertas(totalOfertasData.totalElements);
+        
+        // Cargar empresas (para contar el total)
+        try {
+          const empresasData = await empresasService.listar(0, 1);
+          setTotalEmpresas(empresasData.totalElements);
+        } catch (error) {
+          console.error("Error cargando empresas:", error);
+          setTotalEmpresas(0);
+        }
+        
+        // Cargar candidatos (para contar el total)
+        try {
+          const candidatosData = await candidatosService.listar(0, 1);
+          setTotalCandidatos(candidatosData.totalElements);
+        } catch (error) {
+          console.error("Error cargando candidatos:", error);
+          setTotalCandidatos(0);
+        }
+        
       } catch (error) {
-        console.error("Error cargando ofertas:", error);
-        toast.error("Error al cargar las ofertas de empleo");
+        console.error("Error cargando datos:", error);
+        toast.error("Error al cargar los datos");
       } finally {
         setLoading(false);
       }
     };
-    fetchJobs();
+    fetchData();
   }, []);
 
   const filtered = ofertas
@@ -77,30 +107,36 @@ export default function Index() {
       {/* Stats Section */}
       <section className="mx-auto max-w-6xl px-4 py-12">
         <div className="grid gap-6 sm:grid-cols-3">
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-5">
+          <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <Briefcase className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{ofertas.length}+</p>
+              <p className="text-2xl font-bold text-foreground">
+                {loading ? "..." : totalOfertas.toLocaleString()}+
+              </p>
               <p className="text-sm text-muted-foreground">Ofertas activas</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-5">
+          <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">50+</p>
-              <p className="text-sm text-muted-foreground">Empresas tech</p>
+              <p className="text-2xl font-bold text-foreground">
+                {loading ? "..." : totalEmpresas.toLocaleString()}+
+              </p>
+              <p className="text-sm text-muted-foreground">Empresas registradas</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-5">
+          <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">1.200+</p>
+              <p className="text-2xl font-bold text-foreground">
+                {loading ? "..." : totalCandidatos.toLocaleString()}+
+              </p>
               <p className="text-sm text-muted-foreground">Candidatos registrados</p>
             </div>
           </div>
@@ -124,7 +160,8 @@ export default function Index() {
             filtered.map((job) => <JobCard key={job.id} job={job} />)
           ) : (
             <div className="rounded-xl border border-border bg-card p-12 text-center">
-              <p className="text-muted-foreground">No se encontraron ofertas.</p>
+              <Briefcase className="mx-auto h-10 w-10 text-muted-foreground" />
+              <p className="mt-3 text-muted-foreground">No se encontraron ofertas.</p>
             </div>
           )}
         </div>

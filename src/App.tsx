@@ -16,6 +16,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLayout from "./pages/admin/AdminLayout";
+import CompanyJobs from "./pages/CompanyJobs";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +35,7 @@ const App = () => (
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/jobs/:id" element={<JobDetail />} />
               <Route path="/profile" element={<Profile />} />
-              
+
               {/* Rutas protegidas con Layout */}
               <Route
                 path="/company/dashboard"
@@ -46,6 +47,14 @@ const App = () => (
               />
               {/* Nueva ruta: Ver ofertas de la empresa (competencia) */}
               <Route
+                path="/company/jobs"
+                element={
+                  <ProtectedRoute requiredRole="RECRUITER">
+                    <CompanyJobs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/candidate/dashboard"
                 element={
                   <ProtectedRoute requiredRole="CANDIDATO">
@@ -54,7 +63,7 @@ const App = () => (
                 }
               />
             </Route>
-            
+
             {/* Admin routes */}
             <Route element={<AdminLayout />}>
               <Route
@@ -66,7 +75,7 @@ const App = () => (
                 }
               />
             </Route>
-            
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

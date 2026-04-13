@@ -42,7 +42,7 @@ export default function Navbar() {
   const isAdmin = currentUser?.rol?.toLowerCase() === "admin";
 
   const userFotoUrl = currentUser?.foto?.ruta || currentUser?.fotoUrl;
-  
+
   // Verificar rutas
   const isCompanyDashboard = location.pathname === "/company/dashboard";
   const isCompanyJobs = location.pathname === "/company/jobs";
@@ -53,40 +53,55 @@ export default function Navbar() {
     }
   };
 
+  // Función para obtener la ruta del dashboard según el rol
+  const getDashboardRoute = () => {
+    if (isAdmin) return "/admin/dashboard";
+    if (isRecruiter) return "/company/dashboard";
+    if (isCandidate) return "/";
+    return "/";
+  };
+
+  // Función para manejar el click en el logo
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isAuthenticated) {
+      navigate(getDashboardRoute());
+    } else {
+      navigate("/");
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          {/* Logo - siempre visible */}
-          <Link to="/" className="flex items-center gap-2">
+          {/* Logo - redirige al dashboard correspondiente según rol */}
+          <button onClick={handleLogoClick} className="flex items-center gap-2 cursor-pointer">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Briefcase className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="text-lg font-bold text-foreground">DevJobs</span>
-          </Link>
+          </button>
 
           {/* Navegación - solo visible en desktop */}
           <nav className="hidden items-center gap-6 md:flex">
             {/* Mostrar enlaces según la ruta actual */}
             {isCompanyDashboard && isAuthenticated && isRecruiter && (
               <>
-                <Link to="/jobs" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                <Link to="/company/jobs" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                   Explorar Ofertas
                 </Link>
               </>
             )}
-            
+
             {isCompanyJobs && isAuthenticated && isRecruiter && (
               <>
                 <Link to="/company/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                   Mis Ofertas
                 </Link>
-                <Link to="/jobs" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                  Explorar Ofertas
-                </Link>
               </>
             )}
-            
+
             {/* Links para usuarios autenticados (fuera de rutas de reclutador) */}
             {!isCompanyDashboard && !isCompanyJobs && isAuthenticated && isAdmin && (
               <Link to="/admin/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
@@ -95,18 +110,29 @@ export default function Navbar() {
             )}
             {!isCompanyDashboard && !isCompanyJobs && isAuthenticated && isRecruiter && (
               <Link to="/company/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                  <Building2 className="inline h-3.5 w-3.5 mr-1" />
-                  Mis Ofertas
-                </Link>
-            )}
-            {!isCompanyDashboard && !isCompanyJobs && isAuthenticated && isCandidate && (
-              <Link to="/candidate/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                Mis Aplicaciones
+                Mis Ofertas
               </Link>
             )}
-            
+            {!isCompanyDashboard && !isCompanyJobs && isAuthenticated && isCandidate && (
+              <>
+                <Link to="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                  Inicio
+                </Link>
+                <Link to="/candidate/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                  Mis Aplicaciones
+                </Link>
+                <Link to="/jobs" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                  Explorar Ofertas
+                </Link>
+              </>
+            )}
+
             {/* Enlace a Jobs para usuarios no autenticados */}
-            
+            {!isAuthenticated && (
+              <Link to="/jobs" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                Ofertas
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-3">
@@ -195,12 +221,12 @@ export default function Navbar() {
           <div className="border-t border-border bg-card px-4 pb-4 pt-2 md:hidden">
             {isCompanyDashboard && isAuthenticated && isRecruiter && (
               <>
-                <Link to="/jobs" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+                <Link to="/company/jobs" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                   Explorar Ofertas
                 </Link>
               </>
             )}
-            
+
             {isCompanyJobs && isAuthenticated && isRecruiter && (
               <>
                 <Link to="/company/dashboard" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
@@ -211,7 +237,7 @@ export default function Navbar() {
                 </Link>
               </>
             )}
-            
+
             {!isCompanyDashboard && !isCompanyJobs && isAuthenticated && isAdmin && (
               <Link to="/admin/dashboard" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
                 Panel Admin
@@ -227,7 +253,14 @@ export default function Navbar() {
                 Mis Aplicaciones
               </Link>
             )}
-            
+
+            {/* Enlace a Jobs para usuarios no autenticados en móvil */}
+            {!isAuthenticated && (
+              <Link to="/jobs" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+                Ofertas
+              </Link>
+            )}
+
             {!isAuthenticated && (
               <>
                 <Link to="/login" className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
@@ -238,7 +271,7 @@ export default function Navbar() {
                 </Link>
               </>
             )}
-            
+
             {/* Botón Publicar Oferta en móvil */}
             {isCompanyDashboard && isAuthenticated && isRecruiter && (
               <button

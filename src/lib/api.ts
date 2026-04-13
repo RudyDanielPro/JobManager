@@ -2,6 +2,10 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'https://jobmanagerbackend.onrender.com/api',
+  timeout: 120000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 api.interceptors.request.use((config) => {
@@ -9,7 +13,7 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, config.data);
+  console.log(`📤 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   return config;
 });
 
@@ -19,25 +23,27 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error(`❌ Error en ${error.config?.url}:`, error.response?.status, error.response?.data);
+    console.error(`❌ Error en ${error.config?.url}:`);
     
-    if (error.response?.status === 401) {
-      const url = error.config?.url || '';
-      const method = error.config?.method || '';
-      const isCreateUser = url.includes('/admin/usuarios') && method === 'post';
+    if (error.code === 'ECONNABORTED') {
+      console.error('Timeout: El servidor no respondió a tiempo');
+    } else if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Data:', error.response.data);
       
-      // No redirigir en creación de usuarios, solo mostrar error
-      if (!isCreateUser) {
-        const token = localStorage.getItem('token');
-        if (token) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-            window.location.href = '/login';
-          }
+      if (error.response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
         }
       }
+    } else if (error.request) {
+      console.error('No se recibió respuesta del servidor');
+    } else {
+      console.error('Error:', error.message);
     }
+    
     return Promise.reject(error);
   }
 );

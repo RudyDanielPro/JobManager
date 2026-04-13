@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { candidatosService } from "@/lib/candidatosService";
 import { empresasService } from "@/lib/empresasService";
 import { adminService } from "@/lib/adminService";
+import api from "@/lib/api";
 
 export default function Profile() {
   const { currentUser } = useAuth();
@@ -65,7 +66,6 @@ export default function Profile() {
     if (file) {
       setSelectedFile(file);
       const reader = new FileReader();
-      // Almacenamos el resultado en Base64 para mostrar el preview y para enviarlo al backend
       reader.onloadend = () => setAvatarPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
@@ -77,27 +77,29 @@ export default function Profile() {
     
     try {
       if (isCandidate && currentUser) {
+        // Actualizar datos básicos
         await candidatosService.actualizar(currentUser.id, {
           nombre: name,
           apellido: apellido,
         });
         
-        // Enviamos el string en Base64 (avatarPreview) en lugar del objeto File
-        if (selectedFile && avatarPreview) {
-          await candidatosService.actualizarFoto(currentUser.id, avatarPreview);
+        // ✅ Enviar foto como archivo, no como Base64
+        if (selectedFile) {
+          await candidatosService.actualizarFoto(currentUser.id, selectedFile);
         }
         
         toast.success("Perfil actualizado correctamente");
       } else if (isRecruiter && currentUser) {
+        // Actualizar datos de la empresa
         await empresasService.actualizar(currentUser.id, {
           nombreEmpresa: empresaNombre,
           descripcion: descripcion,
           url: url,
         });
         
-        // Enviamos el string en Base64 (avatarPreview) en lugar del objeto File
-        if (selectedFile && avatarPreview) {
-          await empresasService.actualizarLogo(currentUser.id, avatarPreview);
+        // ✅ Enviar logo como archivo, no como Base64
+        if (selectedFile) {
+          await empresasService.actualizarLogo(currentUser.id, selectedFile);
         }
         
         toast.success("Perfil actualizado correctamente");
@@ -107,17 +109,14 @@ export default function Profile() {
           apellido: apellido,
         });
         
-        // Nota: El Swagger de Spring Boot actual no tiene un endpoint dedicado 
-        // para cambiar la foto del admin de forma aislada. Si lo añades al backend,
-        // puedes implementarlo aquí. Por ahora, se omite para evitar un error 404.
-        
         toast.success("Perfil actualizado correctamente");
       }
       
       await loadProfileData();
-    } catch (error) {
+      setSelectedFile(null); // Limpiar archivo seleccionado
+    } catch (error: any) {
       console.error("Error saving profile:", error);
-      toast.error("Error al guardar los cambios");
+      toast.error(error.response?.data || "Error al guardar los cambios");
     } finally {
       setSaving(false);
     }

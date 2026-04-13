@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, User, Briefcase, LayoutDashboard, AlertCircle, CheckCircle, Bell, Shield } from "lucide-react";
+import { Mail, Lock, User, Briefcase, LayoutDashboard, AlertCircle, CheckCircle, Bell, Shield, Building2, Globe } from "lucide-react";
 import { authService } from "@/lib/authService";
 import type { RegisterData } from "@/lib/authService";
+import { toast } from "sonner";
 
 type UserRole = "reclutador" | "candidato";
 
@@ -19,7 +20,6 @@ export default function Register() {
   });
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -39,18 +39,25 @@ export default function Register() {
       setError("El correo debe ser de Gmail");
       return;
     }
-    if (!form.nombre || !form.apellido || !form.usuario || !form.email || !form.password || !form.confirmPassword || !selectedRole) {
-      setError("Por favor, rellena todos los campos");
+    
+    // Validaciones según el rol
+    if (selectedRole === "candidato") {
+      if (!form.nombre || !form.apellido || !form.usuario || !form.email || !form.password || !form.confirmPassword) {
+        setError("Por favor, rellena todos los campos");
+        return;
+      }
+    } else if (selectedRole === "reclutador") {
+      if (!form.nombre || !form.usuario || !form.email || !form.password || !form.confirmPassword || !form.url) {
+        setError("Por favor, rellena todos los campos");
+        return;
+      }
+    } else {
+      setError("Por favor, selecciona un rol");
       return;
     }
     
     if (form.password !== form.confirmPassword) {
       setError("Las contraseñas no coinciden");
-      return;
-    }
-    
-    if (selectedRole === "reclutador" && !form.url) {
-      setError("La dirección web es obligatoria para reclutadores");
       return;
     }
 
@@ -60,7 +67,7 @@ export default function Register() {
     try {
       const userData: RegisterData = {
         nombre: form.nombre,
-        apellido: form.apellido,
+        apellido: selectedRole === "candidato" ? form.apellido : "",
         usuario: form.usuario,
         email: form.email,
         password: form.password,
@@ -75,12 +82,13 @@ export default function Register() {
       
       await authService.register(userData, selectedFile || undefined);
       
-      setSuccess(true);
-      setTimeout(() => navigate("/login"), 1500);
+      toast.success("¡Registro exitoso! Redirigiendo al login...");
+      navigate("/login");
     } catch (err: any) {
       console.error("Error completo:", err);
       const errorMessage = err.response?.data || err.message || "Error al registrar usuario";
       setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -139,56 +147,58 @@ export default function Register() {
             <p className="mt-1 text-sm text-muted-foreground">Completa tus datos para registrarte</p>
           </div>
 
-          {success ? (
-            <div className="mt-8 flex flex-col items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-8 text-center">
-              <CheckCircle className="h-12 w-12 text-primary" />
-              <p className="text-lg font-semibold text-foreground">¡Registro exitoso!</p>
-              <p className="text-sm text-muted-foreground">Redirigiendo al login...</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              {error && (
-                <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <div className="lg:hidden rounded-xl border border-primary/20 bg-primary/5 p-4 mb-2">
-                <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground">Usa tu correo de Gmail.</span> Ahí te llegarán las notificaciones.
-                  </p>
-                </div>
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
               </div>
+            )}
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Foto de perfil</label>
+            <div className="lg:hidden rounded-xl border border-primary/20 bg-primary/5 p-4 mb-2">
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">Usa tu correo de Gmail.</span> Ahí te llegarán las notificaciones.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Foto de perfil</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={loading}
+                className="flex h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary focus:border-primary focus:outline-none disabled:opacity-50"
+              />
+            </div>
+
+            {/* Campo Nombre / Nombre de la empresa - DINÁMICO según rol */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">
+                {selectedRole === "reclutador" ? "Nombre de la empresa *" : "Nombre *"}
+              </label>
+              <div className="relative">
+                {selectedRole === "reclutador" ? (
+                  <Building2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                ) : (
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                )}
                 <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
+                  type="text"
+                  value={form.nombre}
+                  onChange={(e) => update("nombre", e.target.value)}
+                  placeholder={selectedRole === "reclutador" ? "Nombre de tu empresa" : "Tu nombre"}
                   disabled={loading}
-                  className="flex h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary focus:border-primary focus:outline-none disabled:opacity-50"
+                  className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                 />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Nombre *</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={form.nombre}
-                    onChange={(e) => update("nombre", e.target.value)}
-                    placeholder="Tu nombre"
-                    disabled={loading}
-                    className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
+            {/* Campo Apellido - SOLO para candidatos */}
+            {selectedRole === "candidato" && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Apellido *</label>
                 <div className="relative">
@@ -203,147 +213,154 @@ export default function Register() {
                   />
                 </div>
               </div>
+            )}
 
+            {/* Campo URL - SOLO para reclutadores */}
+            {selectedRole === "reclutador" && (
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Usuario *</label>
+                <label className="text-sm font-medium text-foreground">Sitio web *</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Globe className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
-                    type="text"
-                    value={form.usuario}
-                    onChange={(e) => update("usuario", e.target.value)}
-                    placeholder="Nombre de usuario"
+                    type="url"
+                    value={form.url}
+                    onChange={(e) => update("url", e.target.value)}
+                    placeholder="https://tuempresa.com"
                     disabled={loading}
                     className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                   />
                 </div>
               </div>
+            )}
 
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Usuario *</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={form.usuario}
+                  onChange={(e) => update("usuario", e.target.value)}
+                  placeholder="Nombre de usuario"
+                  disabled={loading}
+                  className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Correo electrónico *</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => update("email", e.target.value)}
+                  placeholder="tu@gmail.com"
+                  disabled={loading}
+                  className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Correo electrónico *</label>
+                <label className="text-sm font-medium text-foreground">Contraseña *</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => update("email", e.target.value)}
-                    placeholder="tu@gmail.com"
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => update("password", e.target.value)}
+                    placeholder="••••••••"
                     disabled={loading}
                     className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                   />
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-foreground">Contraseña *</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="password"
-                      value={form.password}
-                      onChange={(e) => update("password", e.target.value)}
-                      placeholder="••••••••"
-                      disabled={loading}
-                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-foreground">Confirmar *</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="password"
-                      value={form.confirmPassword}
-                      onChange={(e) => update("confirmPassword", e.target.value)}
-                      placeholder="••••••••"
-                      disabled={loading}
-                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                    />
-                  </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Confirmar *</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="password"
+                    value={form.confirmPassword}
+                    onChange={(e) => update("confirmPassword", e.target.value)}
+                    placeholder="••••••••"
+                    disabled={loading}
+                    className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                  />
                 </div>
               </div>
+            </div>
 
-              {selectedRole === "reclutador" && (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-foreground">Dirección web de la empresa *</label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="url"
-                      value={form.url}
-                      onChange={(e) => update("url", e.target.value)}
-                      placeholder="https://empresa.com"
-                      disabled={loading}
-                      className="flex h-11 w-full rounded-lg border border-border bg-card pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                    />
+            <div className="space-y-2 pt-2">
+              <label className="text-sm font-medium text-foreground">Selecciona tu rol *</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRole("reclutador");
+                    setForm(prev => ({ ...prev, apellido: "" }));
+                  }}
+                  disabled={loading}
+                  className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+                    selectedRole === "reclutador"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border bg-card hover:border-primary/30"
+                  } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                    selectedRole === "reclutador" ? "bg-primary/20" : "bg-primary/10"
+                  }`}>
+                    <LayoutDashboard className="h-5 w-5 text-primary" />
                   </div>
-                </div>
-              )}
-
-              <div className="space-y-2 pt-2">
-                <label className="text-sm font-medium text-foreground">Selecciona tu rol *</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRole("reclutador")}
-                    disabled={loading}
-                    className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-                      selectedRole === "reclutador"
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "border-border bg-card hover:border-primary/30"
-                    } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                      selectedRole === "reclutador" ? "bg-primary/20" : "bg-primary/10"
-                    }`}>
-                      <LayoutDashboard className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Reclutador</p>
-                      <p className="text-xs text-muted-foreground">Publica ofertas</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRole("candidato")}
-                    disabled={loading}
-                    className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-                      selectedRole === "candidato"
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "border-border bg-card hover:border-primary/30"
-                    } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                      selectedRole === "candidato" ? "bg-primary/20" : "bg-primary/10"
-                    }`}>
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Candidato</p>
-                      <p className="text-xs text-muted-foreground">Busca empleo</p>
-                    </div>
-                  </button>
-                </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Reclutador</p>
+                    <p className="text-xs text-muted-foreground">Publica ofertas</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRole("candidato");
+                    setForm(prev => ({ ...prev, url: "" }));
+                  }}
+                  disabled={loading}
+                  className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+                    selectedRole === "candidato"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border bg-card hover:border-primary/30"
+                  } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                    selectedRole === "candidato" ? "bg-primary/20" : "bg-primary/10"
+                  }`}>
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Candidato</p>
+                    <p className="text-xs text-muted-foreground">Busca empleo</p>
+                  </div>
+                </button>
               </div>
+            </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-2 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "Registrando..." : "Crear cuenta"}
-              </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Registrando..." : "Crear cuenta"}
+            </button>
 
-              <p className="text-center text-sm text-muted-foreground">
-                ¿Ya tienes cuenta?{" "}
-                <Link to="/login" className="font-semibold text-primary hover:underline">
-                  Inicia sesión
-                </Link>
-              </p>
-            </form>
-          )}
+            <p className="text-center text-sm text-muted-foreground">
+              ¿Ya tienes cuenta?{" "}
+              <Link to="/login" className="font-semibold text-primary hover:underline">
+                Inicia sesión
+              </Link>
+            </p>
+          </form>
         </div>
       </div>
     </div>

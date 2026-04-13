@@ -41,7 +41,6 @@ export default function CompanyDashboard() {
       const response = await ofertasService.misOfertas(0, 100);
       setOfertas(response.content);
       
-      // Extraer ubicaciones únicas para el filtro
       const uniqueLocations = [...new Set(response.content.map(job => job.ubicacion).filter(Boolean))];
       setLocations(uniqueLocations as string[]);
       
@@ -62,7 +61,6 @@ export default function CompanyDashboard() {
   ) => {
     let filtered = [...data];
     
-    // Filtro por búsqueda (título o empresa)
     if (search.trim()) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(
@@ -73,14 +71,12 @@ export default function CompanyDashboard() {
       );
     }
     
-    // Filtro por estado
     if (status === "active") {
       filtered = filtered.filter((job) => job.estado === true);
     } else if (status === "inactive") {
       filtered = filtered.filter((job) => job.estado === false);
     }
     
-    // Filtro por ubicación
     if (location !== "all" && location) {
       filtered = filtered.filter((job) => job.ubicacion === location);
     }
@@ -171,14 +167,8 @@ export default function CompanyDashboard() {
     }
   };
 
-  // ✅ Función corregida para cambiar el estado
   const handleToggleStatus = async (offer: OfertaResponse) => {
-    console.log("🔵 Toggle status - Oferta ID:", offer.id);
-    console.log("🔵 Estado actual:", offer.estado);
-    
-    // Verificar token
     const token = localStorage.getItem("token");
-    console.log("🔵 Token existe:", !!token);
     
     if (!token) {
       toast.error("Sesión expirada. Por favor, inicia sesión nuevamente");
@@ -187,30 +177,24 @@ export default function CompanyDashboard() {
     }
     
     try {
-      let response;
       if (offer.estado) {
-        console.log("🔵 Desactivando oferta...");
-        response = await api.patch(`/ofertas/${offer.id}/desactivar`);
+        await ofertasService.desactivar(offer.id);
+        toast.success("Oferta desactivada");
       } else {
-        console.log("🔵 Activando oferta...");
-        response = await api.patch(`/ofertas/${offer.id}/activar`);
+        await ofertasService.activar(offer.id);
+        toast.success("Oferta activada");
       }
-      
-      console.log("🔵 Respuesta:", response.data);
-      toast.success(`Oferta ${offer.estado ? "desactivada" : "activada"} correctamente`);
       await fetchOfertas();
     } catch (error: any) {
-      console.error("🔴 Error cambiando estado:", error);
-      console.error("🔴 Status code:", error.response?.status);
-      console.error("🔴 Response data:", error.response?.data);
+      console.error("Error cambiando estado:", error);
       
       if (error.response?.status === 403) {
-        toast.error("No tienes permisos para modificar esta oferta. Verifica que sea tuya.");
+        toast.error("No tienes permisos para modificar esta oferta");
       } else if (error.response?.status === 401) {
         toast.error("Sesión expirada. Por favor, inicia sesión nuevamente");
         logout();
       } else {
-        toast.error(error.response?.data || "Error al cambiar el estado de la oferta");
+        toast.error(error.response?.data || "Error al cambiar el estado");
       }
     }
   };
@@ -224,14 +208,7 @@ export default function CompanyDashboard() {
       await fetchOfertas();
     } catch (error: any) {
       console.error("Error eliminando oferta:", error);
-      if (error.response?.status === 403) {
-        toast.error("No tienes permisos para eliminar esta oferta");
-      } else if (error.response?.status === 401) {
-        toast.error("Sesión expirada. Por favor, inicia sesión nuevamente");
-        logout();
-      } else {
-        toast.error(error.response?.data || "Error al eliminar la oferta");
-      }
+      toast.error(error.response?.data || "Error al eliminar la oferta");
     }
   };
 
@@ -353,7 +330,6 @@ export default function CompanyDashboard() {
             )}
           </div>
 
-          {/* Panel de Filtros */}
           {showFilters && (
             <div className="rounded-lg border border-border bg-card p-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -412,7 +388,6 @@ export default function CompanyDashboard() {
           )}
         </div>
 
-        {/* Resultados de búsqueda */}
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">
             Listado de ofertas
@@ -462,7 +437,6 @@ export default function CompanyDashboard() {
                 className="group rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/20"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                  {/* Información de la oferta */}
                   <div className="flex items-start gap-4 flex-1 min-w-0">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 text-lg font-bold text-primary">
                       {job.nombreEmpresa?.charAt(0) || "E"}
@@ -500,7 +474,6 @@ export default function CompanyDashboard() {
                     </div>
                   </div>
 
-                  {/* Botones de acción */}
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <button
                       onClick={() => handleToggleStatus(job)}
@@ -547,20 +520,20 @@ export default function CompanyDashboard() {
           )}
         </div>
 
-        {/* Modal de Crear Oferta */}
+        {/* Modal de Crear Oferta - mantener igual */}
         {showCreateForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowCreateForm(false)}>
-            <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between border-b border-border pb-4">
                 <h2 className="text-xl font-semibold text-foreground">Crear nueva oferta</h2>
-                <button onClick={() => setShowCreateForm(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary">
+                <button onClick={() => setShowCreateForm(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary">
                   <X className="h-4 w-4" />
                 </button>
               </div>
               
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Título del puesto <span className="text-destructive">*</span></label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Título del puesto *</label>
                   <input
                     type="text"
                     placeholder="Ej: Desarrollador Full Stack"
@@ -571,7 +544,7 @@ export default function CompanyDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Ubicación <span className="text-destructive">*</span></label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Ubicación *</label>
                   <input
                     type="text"
                     placeholder="Ej: Remoto, Madrid, Barcelona"
@@ -593,7 +566,7 @@ export default function CompanyDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Descripción del puesto <span className="text-destructive">*</span></label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Descripción del puesto *</label>
                   <textarea
                     placeholder="Describe las responsabilidades, requisitos y beneficios del puesto..."
                     value={newJob.descripcion}
@@ -610,23 +583,16 @@ export default function CompanyDashboard() {
               <div className="mt-6 flex gap-3 pt-4 border-t border-border">
                 <button
                   onClick={() => setShowCreateForm(false)}
-                  className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                  className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleCreateJob}
                   disabled={submitting || !newJob.titulo || !newJob.ubicacion || !newJob.descripcion}
-                  className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="inline h-4 w-4 animate-spin mr-2" />
-                      Publicando...
-                    </>
-                  ) : (
-                    "Publicar oferta"
-                  )}
+                  {submitting ? "Publicando..." : "Publicar oferta"}
                 </button>
               </div>
             </div>
@@ -636,17 +602,17 @@ export default function CompanyDashboard() {
         {/* Modal de Editar Oferta */}
         {showEditForm && editingOffer && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowEditForm(false)}>
-            <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between border-b border-border pb-4">
                 <h2 className="text-xl font-semibold text-foreground">Editar oferta</h2>
-                <button onClick={() => setShowEditForm(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary">
+                <button onClick={() => setShowEditForm(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary">
                   <X className="h-4 w-4" />
                 </button>
               </div>
               
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Título del puesto <span className="text-destructive">*</span></label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Título del puesto *</label>
                   <input
                     type="text"
                     placeholder="Ej: Desarrollador Full Stack"
@@ -657,7 +623,7 @@ export default function CompanyDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Ubicación <span className="text-destructive">*</span></label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Ubicación *</label>
                   <input
                     type="text"
                     placeholder="Ej: Remoto, Madrid, Barcelona"
@@ -679,7 +645,7 @@ export default function CompanyDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Descripción del puesto <span className="text-destructive">*</span></label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Descripción del puesto *</label>
                   <textarea
                     placeholder="Describe las responsabilidades, requisitos y beneficios del puesto..."
                     value={newJob.descripcion}
@@ -696,23 +662,16 @@ export default function CompanyDashboard() {
               <div className="mt-6 flex gap-3 pt-4 border-t border-border">
                 <button
                   onClick={() => setShowEditForm(false)}
-                  className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                  className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleUpdateJob}
                   disabled={submitting || !newJob.titulo || !newJob.ubicacion || !newJob.descripcion}
-                  className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="inline h-4 w-4 animate-spin mr-2" />
-                      Actualizando...
-                    </>
-                  ) : (
-                    "Actualizar oferta"
-                  )}
+                  {submitting ? "Actualizando..." : "Actualizar oferta"}
                 </button>
               </div>
             </div>
