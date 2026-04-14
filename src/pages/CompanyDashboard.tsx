@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { ofertasService, type OfertaResponse } from "@/lib/ofertasService";
 import api from "@/lib/api";
-import { 
-  Plus, Briefcase, X, Loader2, Eye, Edit, Trash2, CheckCircle, XCircle, 
-  MapPin, DollarSign, Calendar, Building2, Search, Filter, ChevronDown 
+import {
+  Plus, Briefcase, X, Loader2, Eye, Edit, Trash2, CheckCircle, XCircle,
+  MapPin, DollarSign, Calendar, Building2, Search, Filter, ChevronDown
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,19 +20,19 @@ export default function CompanyDashboard() {
   const [filteredOfertas, setFilteredOfertas] = useState<OfertaResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Filtros y búsqueda
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [filterLocation, setFilterLocation] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
   const [locations, setLocations] = useState<string[]>([]);
-  
-  const [newJob, setNewJob] = useState({ 
-    titulo: "", 
-    ubicacion: "", 
-    rangoSalarial: "", 
-    descripcion: "" 
+
+  const [newJob, setNewJob] = useState({
+    titulo: "",
+    ubicacion: "",
+    rangoSalarial: "",
+    descripcion: ""
   });
 
   const fetchOfertas = async () => {
@@ -40,10 +40,10 @@ export default function CompanyDashboard() {
     try {
       const response = await ofertasService.misOfertas(0, 100);
       setOfertas(response.content);
-      
+
       const uniqueLocations = [...new Set(response.content.map(job => job.ubicacion).filter(Boolean))];
       setLocations(uniqueLocations as string[]);
-      
+
       applyFilters(response.content, searchTerm, filterStatus, filterLocation);
     } catch (error) {
       console.error("Error cargando ofertas:", error);
@@ -54,13 +54,13 @@ export default function CompanyDashboard() {
   };
 
   const applyFilters = (
-    data: OfertaResponse[], 
-    search: string, 
+    data: OfertaResponse[],
+    search: string,
     status: "all" | "active" | "inactive",
     location: string
   ) => {
     let filtered = [...data];
-    
+
     if (search.trim()) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(
@@ -70,17 +70,17 @@ export default function CompanyDashboard() {
           job.descripcion?.toLowerCase().includes(searchLower)
       );
     }
-    
+
     if (status === "active") {
       filtered = filtered.filter((job) => job.estado === true);
     } else if (status === "inactive") {
       filtered = filtered.filter((job) => job.estado === false);
     }
-    
+
     if (location !== "all" && location) {
       filtered = filtered.filter((job) => job.ubicacion === location);
     }
-    
+
     setFilteredOfertas(filtered);
   };
 
@@ -169,13 +169,13 @@ export default function CompanyDashboard() {
 
   const handleToggleStatus = async (offer: OfertaResponse) => {
     const token = localStorage.getItem("token");
-    
+
     if (!token) {
       toast.error("Sesión expirada. Por favor, inicia sesión nuevamente");
       logout();
       return;
     }
-    
+
     try {
       if (offer.estado) {
         await ofertasService.desactivar(offer.id);
@@ -187,7 +187,7 @@ export default function CompanyDashboard() {
       await fetchOfertas();
     } catch (error: any) {
       console.error("Error cambiando estado:", error);
-      
+
       if (error.response?.status === 403) {
         toast.error("No tienes permisos para modificar esta oferta");
       } else if (error.response?.status === 401) {
@@ -201,7 +201,7 @@ export default function CompanyDashboard() {
 
   const handleDeleteJob = async (offerId: number) => {
     if (!confirm("¿Estás seguro de que quieres eliminar esta oferta? Esta acción no se puede deshacer.")) return;
-    
+
     try {
       await ofertasService.eliminar(offerId);
       toast.success("Oferta eliminada correctamente");
@@ -338,31 +338,28 @@ export default function CompanyDashboard() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleStatusFilter("all")}
-                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                        filterStatus === "all"
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${filterStatus === "all"
                           ? "bg-primary text-primary-foreground"
                           : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                      }`}
+                        }`}
                     >
                       Todos
                     </button>
                     <button
                       onClick={() => handleStatusFilter("active")}
-                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                        filterStatus === "active"
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${filterStatus === "active"
                           ? "bg-green-600 text-white"
                           : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                      }`}
+                        }`}
                     >
                       Activas
                     </button>
                     <button
                       onClick={() => handleStatusFilter("inactive")}
-                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                        filterStatus === "inactive"
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${filterStatus === "inactive"
                           ? "bg-gray-600 text-white"
                           : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                      }`}
+                        }`}
                     >
                       Inactivas
                     </button>
@@ -401,7 +398,7 @@ export default function CompanyDashboard() {
             Última actualización: {format(new Date(), "dd/MM/yyyy HH:mm")}
           </span>
         </div>
-        
+
         <div className="space-y-4">
           {filteredOfertas.length === 0 ? (
             <div className="rounded-xl border border-border bg-card p-12 text-center">
@@ -438,12 +435,28 @@ export default function CompanyDashboard() {
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 text-lg font-bold text-primary">
-                      {job.nombreEmpresa?.charAt(0) || "E"}
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden">
+                      {job.fotoUrl ? (
+                        <img
+                          src={job.fotoUrl}
+                          alt={job.nombreEmpresa || "Empresa"}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className={`text-lg font-bold text-primary ${job.fotoUrl ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
+                      >
+                        {job.nombreEmpresa?.charAt(0) || "E"}
+                      </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <Link 
-                        to={`/jobs/${job.id}`} 
+                      <Link
+                        to={`/jobs/${job.id}`}
                         className="text-lg font-semibold text-foreground transition-colors hover:text-primary"
                       >
                         {job.titulo}
@@ -477,11 +490,10 @@ export default function CompanyDashboard() {
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <button
                       onClick={() => handleToggleStatus(job)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                        job.estado
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${job.estado
                           ? "bg-green-100 text-green-700 hover:bg-green-200"
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                        }`}
                     >
                       {job.estado ? (
                         <CheckCircle className="h-3 w-3" />
@@ -530,7 +542,7 @@ export default function CompanyDashboard() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              
+
               <div className="mt-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Título del puesto *</label>
@@ -609,7 +621,7 @@ export default function CompanyDashboard() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              
+
               <div className="mt-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Título del puesto *</label>

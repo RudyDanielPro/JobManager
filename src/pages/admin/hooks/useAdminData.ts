@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { adminService, DashboardStats } from '@/lib/adminService';
+import { candidatosService } from '@/lib/candidatosService';
+import { ofertasService } from '@/lib/ofertasService';
+import { empresasService } from '@/lib/empresasService';
 import type { User, Empresa, OfertaLaboral, Postulacion } from '@/lib/types';
 
 const defaultStats: DashboardStats = {
@@ -80,7 +83,24 @@ export function useAdminData() {
   const loadOffers = useCallback(async (page: number) => {
     try {
       const response = await adminService.getOffers(page, 10);
-      setOffers(response.content);
+      console.log('📊 Ofertas cargadas:', response.content);
+      
+      // ✅ Enriquecer ofertas con nombre de empresa si falta
+      const offersEnriquecidas = await Promise.all(
+        response.content.map(async (offer) => {
+          if (!offer.nombreEmpresa && offer.empresaId) {
+            try {
+              const empresa = await empresasService.obtenerPorId(offer.empresaId);
+              return { ...offer, nombreEmpresa: empresa.nombreEmpresa };
+            } catch (error) {
+              console.error('Error obteniendo empresa:', error);
+            }
+          }
+          return offer;
+        })
+      );
+      
+      setOffers(offersEnriquecidas);
       setTotalPages(response.totalPages);
       setCurrentPage(page);
     } catch (error) {
@@ -93,7 +113,40 @@ export function useAdminData() {
   const loadPostulations = useCallback(async (page: number) => {
     try {
       const response = await adminService.getPostulations(page, 10);
-      setPostulations(response.content);
+      console.log('📊 Postulaciones cargadas:', response.content);
+      
+      // ✅ Enriquecer postulaciones con datos faltantes
+      const postulationsEnriquecidas = await Promise.all(
+        response.content.map(async (post) => {
+          const enrichedPost = { ...post };
+          
+          // Si no tiene nombreCandidato, obtener del endpoint de candidato
+          if (!enrichedPost.nombreCandidato && enrichedPost.candidato?.id) {
+            try {
+              const candidato = await candidatosService.obtenerPorId(enrichedPost.candidato.id);
+              enrichedPost.nombreCandidato = `${candidato.nombre} ${candidato.apellido}`;
+              enrichedPost.emailCandidato = candidato.email;
+            } catch (error) {
+              console.error('Error obteniendo candidato:', error);
+            }
+          }
+          
+          // Si no tiene tituloOferta o nombreEmpresa, obtener de la oferta
+          if ((!enrichedPost.tituloOferta || !enrichedPost.nombreEmpresa) && enrichedPost.ofertaId) {
+            try {
+              const oferta = await ofertasService.obtenerPorId(enrichedPost.ofertaId);
+              enrichedPost.tituloOferta = oferta.titulo;
+              enrichedPost.nombreEmpresa = oferta.nombreEmpresa;
+            } catch (error) {
+              console.error('Error obteniendo oferta:', error);
+            }
+          }
+          
+          return enrichedPost;
+        })
+      );
+      
+      setPostulations(postulationsEnriquecidas);
       setTotalPages(response.totalPages);
       setCurrentPage(page);
     } catch (error) {

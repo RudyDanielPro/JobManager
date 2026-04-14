@@ -8,17 +8,6 @@ interface JobCardProps {
 }
 
 export default function JobCard({ job }: JobCardProps) {
-  // Extraer iniciales del nombre de la empresa
-  const getCompanyInitials = () => {
-    if (!job.nombreEmpresa) return "EM";
-    return job.nombreEmpresa
-      .split(" ")
-      .map(word => word[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
   // Formatear fecha
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Reciente";
@@ -48,9 +37,23 @@ export default function JobCard({ job }: JobCardProps) {
     <Link to={`/jobs/${job.id}`} className="group block">
       <div className="card-hover rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:shadow-md">
         <div className="flex items-start gap-4">
-          {/* Logo / Iniciales de la empresa */}
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-            {getCompanyInitials()}
+          {/* Logo / Foto de la empresa */}
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 overflow-hidden">
+            {job.fotoUrl ? (
+              <img 
+                src={job.fotoUrl} 
+                alt={job.nombreEmpresa}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  // Si la imagen falla, mostrar iniciales
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+            ) : null}
+            <span className={`text-sm font-bold text-primary ${job.fotoUrl ? 'hidden' : ''}`}>
+              {job.nombreEmpresa?.charAt(0).toUpperCase() || "E"}
+            </span>
           </div>
           
           <div className="min-w-0 flex-1">

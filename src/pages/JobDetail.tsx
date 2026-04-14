@@ -1,3 +1,4 @@
+// pages/JobDetail.tsx
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { ArrowLeft, MapPin, DollarSign, Clock, Building2, Loader2 } from "lucide-react";
@@ -18,6 +19,7 @@ export default function JobDetail() {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [checkingApplication, setCheckingApplication] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -27,7 +29,6 @@ export default function JobDetail() {
         const data = await ofertasService.obtenerPublica(parseInt(id));
         setJob(data);
 
-        // Verificar si ya aplicó (si está autenticado y es candidato)
         if (currentUser && currentUser.rol?.toLowerCase() === "candidato") {
           await checkIfApplied(parseInt(id));
         }
@@ -55,9 +56,12 @@ export default function JobDetail() {
     }
   };
 
-  const handleApply = async (coverLetter: string, file: File) => {
-    if (!currentUser || !job) return;
+  const handleApply = async (coverLetter: string, file: File): Promise<void> => {
+    if (!currentUser || !job) {
+      throw new Error("No se pudo completar la aplicación");
+    }
 
+    setIsSubmitting(true);
     try {
       await postulacionesService.enviar({
         ofertaId: job.id,
@@ -66,12 +70,22 @@ export default function JobDetail() {
       });
       setShowApplyModal(false);
       setHasApplied(true);
-      toast.success("Aplicación enviada correctamente", {
-        description: "Tu CV ha sido enviado a la empresa.",
+      toast.success("¡Aplicación enviada!", {
+        description: "Tu CV ha sido enviado correctamente. La empresa revisará tu perfil.",
       });
     } catch (error: any) {
       console.error("Error al enviar postulación:", error);
-      toast.error(error.response?.data || "Error al enviar la aplicación");
+      const errorMessage = error.response?.data || "Error al enviar la aplicación";
+      toast.error(errorMessage);
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (!isSubmitting) {
+      setShowApplyModal(false);
     }
   };
 
@@ -112,8 +126,25 @@ export default function JobDetail() {
         <div className="lg:col-span-2 animate-fade-in">
           <div className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg font-bold text-primary">
-                {job.nombreEmpresa?.charAt(0) || "E"}
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 overflow-hidden">
+                {job.fotoUrl ? (
+                  <img 
+                    src={job.fotoUrl} 
+                    alt={job.nombreEmpresa || "Empresa"}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span 
+                  className={`text-lg font-bold text-primary ${job.fotoUrl ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
+                  style={{ display: job.fotoUrl ? 'none' : 'flex' }}
+                >
+                  {job.nombreEmpresa?.charAt(0).toUpperCase() || "E"}
+                </span>
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">{job.titulo}</h1>
@@ -144,8 +175,25 @@ export default function JobDetail() {
         <div className="animate-fade-in">
           <div className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 font-bold text-primary text-sm">
-                {job.nombreEmpresa?.charAt(0) || "E"}
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 overflow-hidden">
+                {job.fotoUrl ? (
+                  <img 
+                    src={job.fotoUrl} 
+                    alt={job.nombreEmpresa || "Empresa"}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span 
+                  className={`font-bold text-primary text-sm ${job.fotoUrl ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
+                  style={{ display: job.fotoUrl ? 'none' : 'flex' }}
+                >
+                  {job.nombreEmpresa?.charAt(0).toUpperCase() || "E"}
+                </span>
               </div>
               <div>
                 <p className="font-semibold text-foreground">{job.nombreEmpresa || "Empresa Confidencial"}</p>
@@ -194,8 +242,9 @@ export default function JobDetail() {
         <ApplyModal
           jobTitle={job.titulo}
           companyName={job.nombreEmpresa || "Empresa Confidencial"}
-          onClose={() => setShowApplyModal(false)}
+          onClose={handleCloseModal}
           onSubmit={handleApply}
+          isSubmitting={isSubmitting}
         />
       )}
     </div>

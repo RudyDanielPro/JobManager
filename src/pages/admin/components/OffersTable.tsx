@@ -27,7 +27,7 @@ export default function OffersTable({
   const filteredOffers = offers.filter(offer => {
     const matchesSearch = searchTerm === '' ||
       offer.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      offer.nombreEmpresa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (offer.nombreEmpresa || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       offer.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === '' || 
       (filterStatus === 'active' && offer.estado) ||
@@ -39,6 +39,11 @@ export default function OffersTable({
     if (onToggleStatus) {
       onToggleStatus(offerId);
     }
+  };
+
+  // ✅ Función para obtener el nombre de la empresa
+  const getEmpresaNombre = (offer: OfertaLaboral): string => {
+    return offer.nombreEmpresa || offer.empresa?.nombreEmpresa || '-';
   };
 
   return (
@@ -90,7 +95,7 @@ export default function OffersTable({
                 <tr key={offer.id} className="border-b border-border hover:bg-secondary/30">
                   <td className="px-4 py-3 text-sm text-muted-foreground">{offer.id}</td>
                   <td className="px-4 py-3 text-sm font-medium text-foreground">{offer.titulo}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{offer.nombreEmpresa || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{getEmpresaNombre(offer)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <MapPin className="h-3 w-3" />

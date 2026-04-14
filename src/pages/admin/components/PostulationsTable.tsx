@@ -26,14 +26,44 @@ export default function PostulationsTable({
 
   const filteredPostulations = postulations.filter(post => {
     const matchesSearch = searchTerm === '' ||
-      post.nombreCandidato?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.tituloOferta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.nombreEmpresa?.toLowerCase().includes(searchTerm.toLowerCase());
+      (post.nombreCandidato || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.tituloOferta || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (post.nombreEmpresa || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === '' || 
       (filterStatus === 'accepted' && post.estado === true) ||
       (filterStatus === 'pending' && post.estado === false);
     return matchesSearch && matchesStatus;
   });
+
+  // ✅ Función para obtener el nombre del candidato
+  const getNombreCandidato = (post: Postulacion): string => {
+    if (post.nombreCandidato) return post.nombreCandidato;
+    if (post.candidato?.nombre && post.candidato?.apellido) {
+      return `${post.candidato.nombre} ${post.candidato.apellido}`;
+    }
+    return '-';
+  };
+
+  // ✅ Función para obtener el email del candidato
+  const getEmailCandidato = (post: Postulacion): string => {
+    if (post.emailCandidato) return post.emailCandidato;
+    if (post.candidato?.usuario?.email) return post.candidato.usuario.email;
+    return '-';
+  };
+
+  // ✅ Función para obtener el título de la oferta
+  const getTituloOferta = (post: Postulacion): string => {
+    if (post.tituloOferta) return post.tituloOferta;
+    if (post.ofertaLaboral?.titulo) return post.ofertaLaboral.titulo;
+    return '-';
+  };
+
+  // ✅ Función para obtener el nombre de la empresa
+  const getNombreEmpresa = (post: Postulacion): string => {
+    if (post.nombreEmpresa) return post.nombreEmpresa;
+    if (post.ofertaLaboral?.empresa?.nombreEmpresa) return post.ofertaLaboral.empresa.nombreEmpresa;
+    return '-';
+  };
 
   return (
     <div className="space-y-4">
@@ -85,12 +115,12 @@ export default function PostulationsTable({
                   <td className="px-4 py-3 text-sm text-muted-foreground">{post.id}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col">
-                      <span className="font-medium text-foreground">{post.nombreCandidato || '-'}</span>
-                      <span className="text-xs text-muted-foreground">{post.emailCandidato || '-'}</span>
+                      <span className="font-medium text-foreground">{getNombreCandidato(post)}</span>
+                      <span className="text-xs text-muted-foreground">{getEmailCandidato(post)}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-foreground">{post.tituloOferta || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{post.nombreEmpresa || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-foreground">{getTituloOferta(post)}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{getNombreEmpresa(post)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3" />

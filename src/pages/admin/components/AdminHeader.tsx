@@ -41,6 +41,9 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
     toast.info('Ayuda: Contacta con soporte@devjobs.com');
   };
 
+  // ✅ Obtener la URL de la foto del admin
+  const userPhotoUrl = currentUser?.foto?.ruta || currentUser?.fotoUrl || null;
+
   return (
     <div className="border-b border-border bg-card">
       <div className="container mx-auto px-6 py-6">
@@ -66,8 +69,17 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
                 onClick={() => setShowMenu(!showMenu)}
                 className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 px-3 py-2 transition-colors hover:bg-secondary"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                  {currentUser?.usuario?.charAt(0).toUpperCase() || 'A'}
+                {/* ✅ Avatar con foto o inicial */}
+                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                  {userPhotoUrl ? (
+                    <img 
+                      src={userPhotoUrl} 
+                      alt={currentUser?.usuario || 'Admin'} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    currentUser?.usuario?.charAt(0).toUpperCase() || 'A'
+                  )}
                 </div>
                 <span className="text-sm font-medium text-foreground">{currentUser?.usuario}</span>
                 <Shield className="h-4 w-4 text-primary" />
@@ -76,9 +88,25 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
               {showMenu && (
                 <div className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-border bg-card shadow-lg">
                   <div className="border-b border-border p-3">
-                    <p className="text-sm font-medium text-foreground">{currentUser?.usuario}</p>
-                    <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
-                    <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    <div className="flex items-center gap-3">
+                      {/* ✅ Avatar en el menú desplegable */}
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                        {userPhotoUrl ? (
+                          <img 
+                            src={userPhotoUrl} 
+                            alt={currentUser?.usuario || 'Admin'} 
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          currentUser?.usuario?.charAt(0).toUpperCase() || 'A'
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{currentUser?.usuario}</p>
+                        <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
+                      </div>
+                    </div>
+                    <span className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                       Administrador
                     </span>
                   </div>

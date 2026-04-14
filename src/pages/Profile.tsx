@@ -9,7 +9,7 @@ import { adminService } from "@/lib/adminService";
 import api from "@/lib/api";
 
 export default function Profile() {
-  const { currentUser } = useAuth();
+  const { currentUser, updateProfile } = useAuth(); // ✅ Usar updateProfile en lugar de setCurrentUser
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [apellido, setApellido] = useState("");
@@ -47,11 +47,17 @@ export default function Profile() {
         setDescripcion(data.descripcion || "");
         setUrl(data.url || "");
         setAvatarPreview(data.fotoUrl || null);
-      } else if (isAdmin) {
-        const adminData = await adminService.getAdminByUserId(currentUser.id);
-        setName(adminData.nombre || "");
-        setApellido(adminData.apellido || "");
-        setAvatarPreview(currentUser.foto?.ruta || null);
+      } else if (isAdmin && currentUser) {
+        try {
+          const adminData = await adminService.getAdminByUserId(currentUser.id);
+          setName(adminData.nombre || "");
+          setApellido(adminData.apellido || "");
+        } catch (error) {
+          console.log("Admin sin perfil aún, usando datos básicos");
+          setName("");
+          setApellido("");
+        }
+        setAvatarPreview(currentUser.foto?.ruta || currentUser.fotoUrl || null);
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -77,43 +83,59 @@ export default function Profile() {
     
     try {
       if (isCandidate && currentUser) {
-        // Actualizar datos básicos
         await candidatosService.actualizar(currentUser.id, {
           nombre: name,
           apellido: apellido,
         });
         
-        // ✅ Enviar foto como archivo, no como Base64
         if (selectedFile) {
-          await candidatosService.actualizarFoto(currentUser.id, selectedFile);
+          const data = await candidatosService.actualizarFoto(currentUser.id, selectedFile);
+          // Actualizar el contexto con la nueva foto
+          updateProfile({ fotoUrl: data.fotoUrl });
         }
         
         toast.success("Perfil actualizado correctamente");
       } else if (isRecruiter && currentUser) {
-        // Actualizar datos de la empresa
         await empresasService.actualizar(currentUser.id, {
           nombreEmpresa: empresaNombre,
           descripcion: descripcion,
           url: url,
         });
         
-        // ✅ Enviar logo como archivo, no como Base64
         if (selectedFile) {
-          await empresasService.actualizarLogo(currentUser.id, selectedFile);
+          const data = await empresasService.actualizarLogo(currentUser.id, selectedFile);
+          // Actualizar el contexto con la nueva foto
+          updateProfile({ fotoUrl: data.fotoUrl });
         }
         
         toast.success("Perfil actualizado correctamente");
       } else if (isAdmin && currentUser) {
+        // Actualizar datos del admin
         await adminService.updateAdmin(currentUser.id, {
           nombre: name,
           apellido: apellido,
         });
         
+        // Subir foto para admin
+        if (selectedFile) {
+          const formData = new FormData();
+          formData.append('foto', selectedFile);
+          
+          await api.put(`/usuarios/${currentUser.id}/foto`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          
+          // Actualizar el contexto con la nueva foto
+          updateProfile({ fotoUrl: avatarPreview });
+        }
+        
         toast.success("Perfil actualizado correctamente");
       }
       
       await loadProfileData();
-      setSelectedFile(null); // Limpiar archivo seleccionado
+      setSelectedFile(null);
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast.error(error.response?.data || "Error al guardar los cambios");
@@ -145,7 +167,7 @@ export default function Profile() {
   };
 
   const getDisplayName = () => {
-    if (isAdmin) return name || currentUser.usuario;
+    if (isAdmin) return name && apellido ? `${name} ${apellido}` : (name || currentUser.usuario);
     if (isCandidate) return name ? `${name} ${apellido}` : currentUser.usuario;
     return empresaNombre || currentUser.usuario;
   };
@@ -242,6 +264,7 @@ export default function Profile() {
               </div>
             </>
           ) : (
+            // Campos para ADMIN
             <>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Nombre</label>

@@ -9,6 +9,7 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (data: Partial<LoginResponse>) => void;
   setIsAuthenticated: (value: boolean) => void;
+  setCurrentUser: (user: LoginResponse | null) => void; // ✅ AÑADIR ESTA LÍNEA
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -106,7 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     updateProfile,
-    setIsAuthenticated
+    setIsAuthenticated,
+    setCurrentUser, // ✅ AÑADIR ESTA LÍNEA
   };
 
   if (loading) {

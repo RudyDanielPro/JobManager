@@ -1,15 +1,22 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { postulacionesService } from "@/lib/postulacionesService";
+import { ofertasService } from "@/lib/ofertasService";
 import { FileText, ExternalLink, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { PostulacionResponse } from "@/lib/postulacionesService";
 
+// ✅ Interfaz extendida para incluir fotoUrl
+interface PostulacionConFoto extends PostulacionResponse {
+  fotoUrl?: string | null;
+}
+
 export default function CandidateDashboard() {
   const { currentUser } = useAuth();
-  const [postulaciones, setPostulaciones] = useState<PostulacionResponse[]>([]);
+  const navigate = useNavigate();
+  const [postulaciones, setPostulaciones] = useState<PostulacionConFoto[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,7 +24,21 @@ export default function CandidateDashboard() {
       if (!currentUser) return;
       try {
         const response = await postulacionesService.misPostulaciones(0, 100);
-        setPostulaciones(response.content);
+        
+        // ✅ Obtener la foto de cada oferta
+        const postulacionesConFoto = await Promise.all(
+          response.content.map(async (post) => {
+            try {
+              const oferta = await ofertasService.obtenerPublica(post.ofertaId);
+              return { ...post, fotoUrl: oferta.fotoUrl };
+            } catch (error) {
+              console.error(`Error obteniendo oferta ${post.ofertaId}:`, error);
+              return { ...post, fotoUrl: null };
+            }
+          })
+        );
+        
+        setPostulaciones(postulacionesConFoto);
       } catch (error) {
         console.error("Error cargando postulaciones:", error);
       } finally {
@@ -38,6 +59,12 @@ export default function CandidateDashboard() {
   const statusLabels: Record<string, string> = {
     aceptada: "Aceptada",
     pendiente: "Pendiente",
+  };
+
+  const handlePostulacionClick = (ofertaId: number) => {
+    if (ofertaId) {
+      navigate(`/jobs/${ofertaId}`);
+    }
   };
 
   if (loading) {
@@ -83,11 +110,32 @@ export default function CandidateDashboard() {
           postulaciones.map((post) => {
             const statusKey = post.estado ? "aceptada" : "pendiente";
             return (
-              <Link key={post.id} to={`/jobs/${post.ofertaId}`} className="block">
-                <div className="card-hover flex flex-col gap-3 rounded-xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                key={post.id}
+                onClick={() => handlePostulacionClick(post.ofertaId)}
+                className="block cursor-pointer"
+              >
+                <div className="card-hover flex flex-col gap-3 rounded-xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between transition-all hover:shadow-md hover:border-primary/20">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                      {post.nombreEmpresa?.charAt(0) || "E"}
+                    {/* ✅ Logo de la empresa con foto */}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 overflow-hidden">
+                      {post.fotoUrl ? (
+                        <img 
+                          src={post.fotoUrl} 
+                          alt={post.nombreEmpresa || "Empresa"}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <span 
+                        className={`text-sm font-bold text-primary ${post.fotoUrl ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
+                      >
+                        {post.nombreEmpresa?.charAt(0) || "E"}
+                      </span>
                     </div>
                     <div>
                       <p className="font-semibold text-foreground">{post.tituloOferta}</p>
@@ -103,7 +151,7 @@ export default function CandidateDashboard() {
                     </span>
                   </div>
                 </div>
-              </Link>
+              </div>
             );
           })
         )}

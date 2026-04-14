@@ -132,7 +132,6 @@ export default function AdminDashboard() {
                   totalPages={totalPages}
                   currentPage={currentPage}
                   onPageChange={setCurrentPage}
-                  onChangeRole={updateUserRole}
                   onCreate={createUser}
                   onUpdate={updateUser}
                   onDelete={(user) => setDeleteModal({

@@ -15,6 +15,11 @@ export interface Candidato {
   nombre: string;
   apellido: string;
   postulaciones?: Postulacion[];
+  usuario?: {
+    id: number;
+    email: string;
+    usuario: string;
+  };
 }
 
 export interface Empresa {
@@ -35,6 +40,7 @@ export interface User {
   password?: string;
   rol: string;
   foto?: UserFoto;
+  fotoUrl?: string;
   candidato?: Candidato;
   empresa?: Empresa;
   admin?: Admin;
@@ -50,6 +56,15 @@ export interface OfertaLaboral {
   estado: boolean;
   empresaId?: number;
   nombreEmpresa?: string;
+  fotoUrl?: string;
+  // ✅ Campos anidados que puede devolver el backend
+  empresa?: {
+    id: number;
+    nombreEmpresa: string;
+    descripcion: string;
+    url: string;
+    fotoUrl?: string;
+  };
 }
 
 export interface Postulacion {
@@ -61,6 +76,30 @@ export interface Postulacion {
   emailCandidato?: string;
   tituloOferta?: string;
   nombreEmpresa?: string;
+  // ✅ Campos anidados que puede devolver el backend
+  candidato?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    usuario?: {
+      id: number;
+      email: string;
+      usuario: string;
+    };
+  };
+  ofertaLaboral?: {
+    id: number;
+    titulo: string;
+    descripcion: string;
+    ubicacion: string;
+    rangoSalarial: string;
+    estado: boolean;
+    empresa?: {
+      id: number;
+      nombreEmpresa: string;
+      fotoUrl?: string;
+    };
+  };
 }
 
 export interface LoginResponse {
@@ -74,7 +113,7 @@ export interface LoginResponse {
   nombre?: string;
   apellido?: string;
   nombreEmpresa?: string;
-  descripcion?: string; 
+  descripcion?: string;
   url?: string;
 }
 
