@@ -83,7 +83,6 @@ export function useAdminData() {
   const loadOffers = useCallback(async (page: number) => {
     try {
       const response = await adminService.getOffers(page, 10);
-      console.log('📊 Ofertas cargadas:', response.content);
       
       // ✅ Enriquecer ofertas con nombre de empresa si falta
       const offersEnriquecidas = await Promise.all(
@@ -113,7 +112,6 @@ export function useAdminData() {
   const loadPostulations = useCallback(async (page: number) => {
     try {
       const response = await adminService.getPostulations(page, 10);
-      console.log('📊 Postulaciones cargadas:', response.content);
       
       // ✅ Enriquecer postulaciones con datos faltantes
       const postulationsEnriquecidas = await Promise.all(

@@ -53,7 +53,7 @@ export default function Profile() {
           setName(adminData.nombre || "");
           setApellido(adminData.apellido || "");
         } catch (error) {
-          console.log("Admin sin perfil aún, usando datos básicos");
+          ("Admin sin perfil aún, usando datos básicos");
           setName("");
           setApellido("");
         }

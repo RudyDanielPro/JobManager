@@ -32,11 +32,6 @@ export const adminService = {
   },
 
   createUser: async (user: Partial<User> & { password?: string; nombre?: string; apellido?: string; nombreEmpresa?: string; descripcion?: string; url?: string }): Promise<User> => {
-    console.log('\n🟢 === adminService.createUser DEBUG ===');
-    console.log('🟢 user recibido:', user);
-    console.log('🟢 user.nombre:', user.nombre);
-    console.log('🟢 user.apellido:', user.apellido);
-    console.log('🟢 user.rol:', user.rol);
 
     const payload: any = {
       email: user.email,
@@ -47,43 +42,32 @@ export const adminService = {
 
     // ✅ El backend espera estructura ANIDADA según la documentación
     if (user.rol === 'CANDIDATO') {
-      console.log('🟢 Construyendo candidato con nombre:', user.nombre, 'apellido:', user.apellido);
       payload.candidato = {
         nombre: user.nombre || '',
         apellido: user.apellido || '',
       };
-      console.log('🟢 payload.candidato:', payload.candidato);
     }
 
     if (user.rol === 'RECRUITER') {
-      console.log('🟢 Construyendo empresa con nombre:', user.nombreEmpresa);
       payload.empresa = {
         nombreEmpresa: user.nombreEmpresa || '',
         descripcion: user.descripcion || '',
         url: user.url || '',
       };
-      console.log('🟢 payload.empresa:', payload.empresa);
     }
 
     if (user.rol === 'ADMIN') {
-      console.log('🟢 Construyendo admin con nombre:', user.nombre, 'apellido:', user.apellido);
       payload.admin = {
         nombre: user.nombre || '',
         apellido: user.apellido || '',
       };
-      console.log('🟢 payload.admin:', payload.admin);
     }
-
-    console.log('🟢 Payload FINAL enviado al backend:', JSON.stringify(payload, null, 2));
     const response = await api.post('/admin/usuarios', payload);
-    console.log('🟢 Respuesta del backend:', response.data);
     return response.data;
   },
 
   updateUser: async (id: number, user: Partial<User> & { password?: string; nombre?: string; apellido?: string; nombreEmpresa?: string; descripcion?: string; url?: string }): Promise<User> => {
-    console.log('\n🟡 === adminService.updateUser DEBUG ===');
-    console.log('🟡 user recibido:', user);
-
+    
     const payload: any = {
       email: user.email,
       usuario: user.usuario,
@@ -115,8 +99,6 @@ export const adminService = {
         apellido: user.apellido || '',
       };
     }
-
-    console.log('🟡 Payload FINAL enviado al backend:', JSON.stringify(payload, null, 2));
     const response = await api.put(`/admin/usuarios/${id}`, payload);
     return response.data;
   },

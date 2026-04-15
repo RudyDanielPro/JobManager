@@ -13,13 +13,12 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  console.log(`📤 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+  (`📤 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   return config;
 });
 
 api.interceptors.response.use(
   (response) => {
-    console.log(`📥 Respuesta de ${response.config.url}:`, response.status);
     return response;
   },
   (error) => {
