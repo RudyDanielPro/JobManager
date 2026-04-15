@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'https://jobmanagerbackend.onrender.com/api',
-  timeout: 120000,
+  timeout: 240000,
   headers: {
     'Content-Type': 'application/json',
   },

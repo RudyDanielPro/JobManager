@@ -36,8 +36,6 @@ export default function AdminSidebar({ activeTab, onTabChange, counts }: AdminSi
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'Usuarios', icon: Users, count: counts?.users },
     { id: 'companies', label: 'Empresas', icon: Building2, count: counts?.companies },
-    { id: 'offers', label: 'Ofertas', icon: Briefcase, count: counts?.offers },
-    { id: 'postulations', label: 'Postulaciones', icon: FileText, count: counts?.postulations },
   ];
 
   const handleHelpClick = () => {

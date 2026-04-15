@@ -7,8 +7,7 @@ import AdminSidebar, { TabType } from './components/AdminSidebar';
 import AdminStats from './components/AdminStats';
 import UsersTable from './components/UsersTable';
 import CompaniesTable from './components/CompaniesTable';
-import OffersTable from './components/OffersTable';
-import PostulationsTable from './components/PostulationsTable';
+
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 
 export default function AdminDashboard() {
@@ -91,8 +90,6 @@ export default function AdminDashboard() {
       case 'dashboard': return 'Dashboard';
       case 'users': return 'Gestión de Usuarios';
       case 'companies': return 'Gestión de Empresas';
-      case 'offers': return 'Gestión de Ofertas';
-      case 'postulations': return 'Gestión de Postulaciones';
       default: return 'Panel de Administración';
     }
   };
@@ -102,8 +99,6 @@ export default function AdminDashboard() {
       case 'dashboard': return 'Resumen general del sistema';
       case 'users': return 'Administra los usuarios del sistema';
       case 'companies': return 'Gestiona las empresas registradas';
-      case 'offers': return 'Controla las ofertas laborales';
-      case 'postulations': return 'Revisa todas las postulaciones';
       default: return '';
     }
   };
@@ -158,31 +153,7 @@ export default function AdminDashboard() {
                 />
               )}
 
-              {activeTab === 'offers' && (
-                <OffersTable
-                  offers={offers}
-                  totalPages={totalPages}
-                  currentPage={currentPage}
-                  onPageChange={setCurrentPage}
-                  onToggleStatus={toggleOfferStatus}
-                  onDelete={(offer) => setDeleteModal({
-                    isOpen: true,
-                    type: 'offer',
-                    id: offer.id,
-                    name: offer.titulo
-                  })}
-                />
-              )}
-
-              {activeTab === 'postulations' && (
-                <PostulationsTable
-                  postulations={postulations}
-                  totalPages={totalPages}
-                  currentPage={currentPage}
-                  onPageChange={setCurrentPage}
-                  onToggleStatus={(postulation) => updatePostulationStatus(postulation.id, !postulation.estado)}
-                />
-              )}
+              
             </>
           )}
         </div>
